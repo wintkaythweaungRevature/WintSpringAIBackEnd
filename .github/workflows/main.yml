@@ -26,9 +26,10 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.OPENAI_API_KEY }}
 
-    - name: Build and push Docker image
+    - - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
         push: true
-        tags: ${{ secrets.DOCKERHUB_USERNAME }}/spring-ai-app:latest
+        # ⚠️ အောက်က tags နေရာမှာ 'wintkay' နေရာမှာ မင်းရဲ့ Docker Hub Username အစစ်ကို ရိုက်ထည့်ပါ
+        tags: wintkay/spring-ai-app:latest
