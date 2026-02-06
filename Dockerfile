@@ -1,9 +1,9 @@
-# ရှေးဟောင်း openjdk အစား ဒါကို သုံးပါ
-FROM eclipse-temurin:17-jdk-alpine
+# Build stage
+FROM maven:3.8.4-openjdk-17 AS build
+COPY . .
+RUN mvn clean package -DskipTests
 
-WORKDIR /app
-
-# Maven ကထွက်လာတဲ့ jar ကို ကူးမယ်
-COPY target/*.jar app.jar
-
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Run stage
+FROM openjdk:17-jdk-slim
+COPY --from=build /target/*.jar app.jar
+ENTRYPOINT ["java","-jar","/app.jar"]
