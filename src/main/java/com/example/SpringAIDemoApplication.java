@@ -2,11 +2,12 @@ package com.example;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.ai.openai.OpenAiChatModel;
-
+@CrossOrigin(origins = "*")
 @SpringBootApplication
 @RestController // 👈 ဒီမှာတင် Controller လုပ်လိုက်မယ်
 public class SpringAIDemoApplication {
@@ -23,7 +24,7 @@ public class SpringAIDemoApplication {
 
     @GetMapping("/")
     public String home() {
-        return "I AM ALIVE AND RUNNING!";
+        return " Hello ! Late Htaw why are you always production after midnight? .Like a demon possed and rise at midnight ";
     }
 
     @GetMapping("/ai/chat")
