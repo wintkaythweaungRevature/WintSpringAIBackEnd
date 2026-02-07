@@ -1,7 +1,12 @@
 # Stage 1: Build the application
+
+# Dockerfile ထဲမှာ ဒီလိုပြင်ပါ
 FROM maven:3.8.4-openjdk-17 AS build
 WORKDIR /app
-
+ARG CACHEBUST=1 
+COPY . .
+RUN mvn clean package -DskipTests
+# ... ကျန်တာတွေ ဆက်ရေးပါ
 # Dependency တွေ အရင်ဆွဲမယ်
 COPY pom.xml .
 RUN mvn dependency:go-offline
