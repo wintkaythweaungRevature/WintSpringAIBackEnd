@@ -4,7 +4,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.context.annotation.ComponentScan;
 @RestController
+@ComponentScan(basePackages = "com.example")
 public class ChatController {
 
     private final OpenAiChatModel chatModel;
