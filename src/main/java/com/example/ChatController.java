@@ -1,9 +1,11 @@
 package com.example;
 
 
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@CrossOrigin(origins = "https://your-app.pages.dev")
+@CrossOrigin(origins = "http://wintspringbootaws.eba-2kvb9tdk.us-east-2.elasticbeanstalk.com/")
 
 @RequestMapping("/api/ai")
 @RestController
