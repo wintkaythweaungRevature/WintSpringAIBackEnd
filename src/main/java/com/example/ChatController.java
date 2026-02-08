@@ -2,7 +2,9 @@ package com.example;
 
 
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @CrossOrigin(origins = "https://wintkaythweaung.com")
@@ -11,5 +13,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class ChatController {
     
-    // ... ကျန်တဲ့ code များdfgsdfg
+    @GetMapping("/ask-ai")
+    public String askAi(@RequestParam(value = "prompt") String prompt) {
+        return chatModel.call(prompt);
+    }
 }
