@@ -4,6 +4,7 @@ import org.springframework.ai.chat.model.ChatModel; // generic interface ကိ�
 import org.springframework.ai.image.ImageModel;
 import org.springframework.ai.image.ImagePrompt;
 import org.springframework.ai.image.ImageResponse;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
@@ -29,12 +30,23 @@ public class ChatController {
     }
 
     // စာသားအတွက် (Ask AI) ✅ JSON format ပြောင်းထားပေးပါတယ်
-    @GetMapping("/ask-ai")
-    public Map<String, String> askAi(@RequestParam(value = "prompt") String prompt) {
+  @GetMapping("/ask-ai")
+public ResponseEntity<?> askAi(@RequestParam String prompt) {
+    try {
+        if (prompt == null || prompt.isBlank()) {
+            return ResponseEntity.badRequest()
+                .body(Map.of("error", "Prompt is missing"));
+        }
+
         String answer = chatModel.call(prompt);
-        // Frontend က response.json() နဲ့ ဖတ်လို့ရအောင် JSON Map ပြန်ပေးမယ်
-        return Collections.singletonMap("answer", answer);
+        return ResponseEntity.ok(Map.of("answer", answer));
+
+    } catch (Exception e) {
+        e.printStackTrace(); // 🔥 server log မှာ error မြင်ရမယ်
+        return ResponseEntity.status(500)
+            .body(Map.of("error", "AI service failed"));
     }
+}
 
     // ပုံအတွက် (Image Generator) ✅
     @GetMapping("/generate-image")
