@@ -1,0 +1,11 @@
+/target/
+/out/
+.idea/
+.vscode/
+.settings/
+.classpath
+.project
+.env
+cloudflared.exe
+*.class
+bin/
