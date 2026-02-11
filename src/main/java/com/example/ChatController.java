@@ -1,40 +1,39 @@
 package com.example;
 
+import org.springframework.ai.chat.model.ChatModel; // generic interface ကို သုံးတာ ပိုကောင်းပါတယ်
 import org.springframework.ai.image.ImageModel;
 import org.springframework.ai.image.ImagePrompt;
 import org.springframework.ai.image.ImageResponse;
-import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
-import java.util.Map;@CrossOrigin(origins = {
-    "https://wintkaythweaung.com",          // www မပါဘဲ တစ်ခု
-    "https://www.wintkaythweaung.com",      // www ပါတာ တစ်ခု
-    "https://springaifrontend.ms-wintkaythweaung-eb9.workers.dev" // Cloudflare Workers အတွက်
-}, allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS})
-@RequestMapping("/api/ai")
-
-
-
+import java.util.Map;
 
 @RestController
+@RequestMapping("/api/ai")
+// @CrossOrigin ကို SecurityConfig မှာ Pattern နဲ့ ပေးထားရင် ဒီမှာ ထပ်ရေးစရာ မလိုတော့ပါဘူး
+// ဒါပေမဲ့ သေချာအောင် ထားချင်ရင်လည်း ထားနိုင်ပါတယ်
 public class ChatController {
 
-    private final OpenAiChatModel chatModel;
-    private final ImageModel imageModel; // ၁။ ImageModel ကို ထပ်ထည့်ပါ
+    private final ChatModel chatModel;
+    private final ImageModel imageModel;
 
-    public ChatController(OpenAiChatModel chatModel, ImageModel imageModel) {
+    public ChatController(ChatModel chatModel, ImageModel imageModel) {
         this.chatModel = chatModel;
-        this.imageModel = imageModel; // ၂။ Dependency Injection လုပ်ပါ
+        this.imageModel = imageModel;
     }
+
     @GetMapping("/test")
-public String test() {
-    return "Backend is alive!";
-}
-    // စာသားအတွက် (Ask AI)
+    public String test() {
+        return "Backend is alive!";
+    }
+
+    // စာသားအတွက် (Ask AI) ✅ JSON format ပြောင်းထားပေးပါတယ်
     @GetMapping("/ask-ai")
-    public String askAi(@RequestParam(value = "prompt") String prompt) {
-        return chatModel.call(prompt);
+    public Map<String, String> askAi(@RequestParam(value = "prompt") String prompt) {
+        String answer = chatModel.call(prompt);
+        // Frontend က response.json() နဲ့ ဖတ်လို့ရအောင် JSON Map ပြန်ပေးမယ်
+        return Collections.singletonMap("answer", answer);
     }
 
     // ပုံအတွက် (Image Generator) ✅
@@ -42,8 +41,6 @@ public String test() {
     public Map<String, String> generateImage(@RequestParam(value = "prompt") String prompt) {
         ImageResponse response = imageModel.call(new ImagePrompt(prompt));
         String imageUrl = response.getResult().getOutput().getUrl();
-        
-        // Frontend မှာ <img> tag နဲ့ သုံးလို့ရအောင် URL ကို JSON ပုံစံနဲ့ ပြန်ပေးပါ
         return Collections.singletonMap("url", imageUrl);
     }
 }
