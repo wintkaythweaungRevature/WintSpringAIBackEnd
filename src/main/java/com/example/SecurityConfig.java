@@ -31,8 +31,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // သင့်ရဲ့ Frontend URL နှစ်ခုလုံးကို အသေအချာ ခွင့်ပြုပေးလိုက်တာပါ
-        configuration.setAllowedOrigins(Arrays.asList("*"
-        ));
+        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "OPTIONS", "PUT", "DELETE"));
         configuration.setAllowedHeaders(Arrays.asList("*")); // Header အားလုံးကို ခွင့်ပြုပါ
         configuration.setAllowCredentials(true);
