@@ -11,9 +11,10 @@ import java.util.Map;
 
 // အဓိက ပြင်ဆင်ထားသော အပိုင်း (CORS ခွင့်ပြုချက်)
 @CrossOrigin(origins = {
-    "https://wintkaythweaung.com",          // Domain အရင်း
-    "https://www.wintkaythweaung.com",      // www ပါသော domain
-    "https://springai.pages.dev"            // Cloudflare Pages ရဲ့ default URL
+    "http://localhost:3000",                // Local development အတွက်
+    "https://wintkaythweaung.com",          // Live domain အတွက်
+    "https://www.wintkaythweaung.com",
+    "https://springai.pages.dev"
 }, allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS})
 @RequestMapping("/api/ai")
 @RestController
