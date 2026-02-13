@@ -9,7 +9,8 @@ import org.springframework.context.annotation.Bean;
 @SpringBootApplication
 public class SpringAIDemoApplication {
 
-    private static final String API_KEY = "OPENAI_API_KEY"; // သင့်ရဲ့ OpenAI API Key ကို ဒီမှာ ထည့်ပါ
+    private static final String API_KEY = "OPENAI_API_KEY";
+    // သင့်ရဲ့ OpenAI API Key ကို ဒီမှာ ထည့်ပါ
 
     public static void main(String[] args) {
     	 System.setProperty("server.port", "8080");
