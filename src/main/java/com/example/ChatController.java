@@ -20,6 +20,7 @@ import java.util.Map;
 @RequestMapping("/api/ai")
 @RestController
 public class ChatController {
+// ChatModel နဲ့ ImageModel ကို Constructor Injection နဲ့ ထည့်သွင်းထားပါတယ်
 
     private final OpenAiChatModel chatModel;
     private final ImageModel imageModel;
