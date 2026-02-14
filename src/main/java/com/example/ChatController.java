@@ -14,7 +14,7 @@ import java.util.Map;
     "http://localhost:3000",                // Local development အတွက်
     "https://wintkaythweaung.com",          // Live domain အတွက်
     "https://www.wintkaythweaung.com",
-    "https:/api.wintbotai.com",
+    "https://www.api.wintbotai.com","https://api.wintbotai.com",
     "https://www.wintbotai.com",
     "https:/wintbotai.com",
     "https://main.dk6jk3fcod2l.amplifyapp.com",
