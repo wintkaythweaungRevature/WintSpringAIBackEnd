@@ -2,6 +2,7 @@ package com.example;
 
 import org.springframework.ai.openai.*;
 import org.springframework.ai.openai.api.*;
+import org.springframework.beans.factory.annotation.Value; // ဒါလေး ထည့်ပေးပါ
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
@@ -9,39 +10,38 @@ import org.springframework.context.annotation.Bean;
 @SpringBootApplication
 public class SpringAIDemoApplication {
 
-    private static final String API_KEY = "${SPRING_AI_OPENAI_API_KEY}";
-    // သင့်ရဲ့ OpenAI API Key ကို ဒီမှာ ထည့်ပါ
+    // @Value ကို သုံးမှသာ AWS ထဲက Key ကို Java က နားလည်မှာ ဖြစ်ပါတယ်
+    @Value("${SPRING_AI_OPENAI_API_KEY}")
+    private String apiKey;
 
     public static void main(String[] args) {
-    	 System.setProperty("server.port", "8080");
+        System.setProperty("server.port", "8080");
         SpringApplication.run(SpringAIDemoApplication.class, args);
-       
     }
 
     @Bean
     public OpenAiChatModel openAiChatModel() {
-        return new OpenAiChatModel(new OpenAiApi(API_KEY));
+        // API_KEY အစား apiKey variable ကို သုံးပါ
+        return new OpenAiChatModel(new OpenAiApi(apiKey));
     }
 
     @Bean
     public OpenAiImageModel openAiImageModel() {
-        return new OpenAiImageModel(new OpenAiImageApi(API_KEY));
+        return new OpenAiImageModel(new OpenAiImageApi(apiKey));
     }
 
     @Bean
     public OpenAiEmbeddingModel openAiEmbeddingModel() {
-        return new OpenAiEmbeddingModel(new OpenAiApi(API_KEY));
+        return new OpenAiEmbeddingModel(new OpenAiApi(apiKey));
     }
 
-    // အခု Error တက်နေတဲ့ Transcription (Audio) အတွက်
     @Bean
     public OpenAiAudioTranscriptionModel openAiAudioTranscriptionModel() {
-        return new OpenAiAudioTranscriptionModel(new OpenAiAudioApi(API_KEY));
+        return new OpenAiAudioTranscriptionModel(new OpenAiAudioApi(apiKey));
     }
     
-    // နောက်ထပ်တက်လာနိုင်တဲ့ Speech Model အတွက်ပါ ကြိုဆောက်ထားပေးပါမယ်
     @Bean
     public OpenAiAudioSpeechModel openAiAudioSpeechModel() {
-        return new OpenAiAudioSpeechModel(new OpenAiAudioApi(API_KEY));
+        return new OpenAiAudioSpeechModel(new OpenAiAudioApi(apiKey));
     }
 }
