@@ -15,6 +15,7 @@ import java.util.Map;
     "https://wintkaythweaung.com",          // Live domain အတွက်
     "https://www.wintkaythweaung.com",
     "https:/api.wintbotai.com",
+    "https://www.wintbotai.com",
     "https:/wintbotai.com",
     "https://main.dk6jk3fcod2l.amplifyapp.com",
     "https://springai.pages.dev"
