@@ -16,7 +16,7 @@ import java.util.Map;
     "https://www.wintkaythweaung.com",
     "https://www.api.wintbotai.com","https://api.wintbotai.com",
     "https://www.wintbotai.com",
-    "https:/wintbotai.com",
+    "https://wintbotai.com",
     "https://main.dk6jk3fcod2l.amplifyapp.com",
     "https://springai.pages.dev"
 }, allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS})
