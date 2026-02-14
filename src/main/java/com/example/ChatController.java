@@ -14,6 +14,8 @@ import java.util.Map;
     "http://localhost:3000",                // Local development အတွက်
     "https://wintkaythweaung.com",          // Live domain အတွက်
     "https://www.wintkaythweaung.com",
+    "https:/api.wintbotai.com",
+    "https:/wintbotai.com",
     "https://main.dk6jk3fcod2l.amplifyapp.com",
     "https://springai.pages.dev"
 }, allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS})
