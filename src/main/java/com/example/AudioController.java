@@ -11,9 +11,22 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 
+
+//အဓိက ပြင်ဆင်ထားသော အပိုင်း (CORS ခွင့်ပြုချက်)
+@CrossOrigin(origins = {
+    "http://localhost:3000",                // Local development အတွက်
+    "https://wintkaythweaung.com",          // Live domain အတွက်
+    "https://www.wintkaythweaung.com",
+   "https://api.wintaibot.com",
+    "https://www.wintaibot.com",
+   "https://wintaibot.com",
+    "https://main.dk6jk3fcod2l.amplifyapp.com",
+    "https://springai.pages.dev"
+}, allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS})
+
+
 @RestController
 @RequestMapping("/api/audio")
-@CrossOrigin(origins = "*") 
 public class AudioController {
 
     private final OpenAiAudioTranscriptionModel transcriptionModel;
