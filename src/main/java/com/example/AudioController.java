@@ -22,7 +22,7 @@ public class AudioController {
         this.transcriptionModel = transcriptionModel;
     }
 
-    @PostMapping("/transcribe")
+    @PostMapping("/api/transcribe")
     public ResponseEntity<String> transcribe(@RequestParam("file") MultipartFile file) {
         try {
             // Options setup
