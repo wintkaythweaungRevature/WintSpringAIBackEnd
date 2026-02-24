@@ -17,25 +17,21 @@ import java.util.List;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-            // 1. CSRF ကို Disable လုပ်ခြင်း (REST API အတွက် လိုအပ်သည်)
-            .csrf(AbstractHttpConfigurer::disable)
-            // 2. CORS setting ကို အောက်က Bean နဲ့ ချိတ်ဆက်ခြင်း
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            // 3. Request permissions သတ်မှတ်ခြင်း
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/api/audio/**").permitAll() // Transcription API ကို ခွင့်ပြုရန်
-                .requestMatchers("/api/ai/**").permitAll() // Transcription API ကို ခွင့်ပြုရန်
-               
-                .requestMatchers("/error").permitAll()         // ✅ Error တက်ရင် 403 မပြဘဲ Error message ပြရန် လိုအပ်သည်
-                .anyRequest().permitAll()                     // ကျန်တဲ့ request အားလုံးကိုလည်း test အနေနဲ့ ခွင့်ပြုထားသည်
-            );
-        
-        return http.build();
-    }
+   @Bean
+public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    http
+        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+        .csrf(AbstractHttpConfigurer::disable)
+        .authorizeHttpRequests(auth -> auth
+            // ✅ OPTIONS request များကို အားလုံးအတွက် permit ပေးရန်
+            .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
+            .requestMatchers("/api/audio/**").permitAll() 
+            .requestMatchers("/api/ai/**").permitAll() 
+            .requestMatchers("/error").permitAll()
+            .anyRequest().permitAll()
+        );
+    return http.build();
+}
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -45,7 +41,8 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
             "http://localhost:3000", 
             "https://www.wintaibot.com", 
-            "https://wintaibot.com"
+            "https://wintaibot.com",
+            "https://api.wintaibot.com"
         ));
         
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
@@ -60,4 +57,6 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
+
+    
 }

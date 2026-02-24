@@ -6,6 +6,16 @@ import org.springframework.ai.image.ImageResponse;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.web.bind.annotation.*;
 
+// Spring AI OpenAI
+import org.springframework.ai.openai.OpenAiAudioTranscriptionModel;
+import org.springframework.ai.openai.OpenAiAudioTranscriptionOptions;
+import org.springframework.ai.openai.api.OpenAiAudioApi;
+import org.springframework.ai.openai.audio.transcription.AudioTranscriptionPrompt;
+import org.springframework.ai.openai.audio.transcription.AudioTranscriptionResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.Collections;
 import java.util.Map;
 
@@ -30,7 +40,8 @@ public class ChatController {
      private final OpenAiAudioTranscriptionModel transcriptionModel;
 
 
-    public ChatController(OpenAiChatModel chatModel, ImageModel imageModel) {
+    public ChatController(OpenAiChatModel chatModel, ImageModel imageModel , OpenAiAudioTranscriptionModel transcriptionModel) {
+         this.transcriptionModel = transcriptionModel;
         this.chatModel = chatModel;
         this.imageModel = imageModel;
     }
