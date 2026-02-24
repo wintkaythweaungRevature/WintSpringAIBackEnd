@@ -13,22 +13,26 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
 
+import org.springframework.http.HttpMethod; // ✅ ဒီ import ပါတာ သေချာပါစေ
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-
-   @Bean
+@Bean
 public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
     http
         .cors(cors -> cors.configurationSource(corsConfigurationSource()))
         .csrf(AbstractHttpConfigurer::disable)
         .authorizeHttpRequests(auth -> auth
-            // ✅ OPTIONS request များကို အားလုံးအတွက် permit ပေးရန်
-            .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
-            .requestMatchers("/api/audio/**").permitAll() 
-            .requestMatchers(HttpMethod.POST, "/api/ai/transcribe").permitAll()
+            // ၁။ OPTIONS (Preflight) requests တွေကို အရင်ခွင့်ပြုမယ်
+            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+            
+            // ၂။ API paths တွေကို ခွင့်ပြုမယ်
             .requestMatchers("/api/ai/**").permitAll() 
+            .requestMatchers("/api/audio/**").permitAll() 
             .requestMatchers("/error").permitAll()
+            
+            // ၃။ ကျန်တာတွေကိုလည်း လက်ရှိမှာ စမ်းသပ်ဖို့ ခွင့်ပြုထားမယ်
             .anyRequest().permitAll()
         );
     return http.build();
