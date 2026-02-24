@@ -66,7 +66,7 @@ public class ChatController {
         return Collections.singletonMap("url", imageUrl);
     }
 
-    @PostMapping("/transcribe")
+    @PostMapping("/ai/transcribe")
     public ResponseEntity<String> transcribe(@RequestParam("file") MultipartFile file) {
         try {
             // Options setup
