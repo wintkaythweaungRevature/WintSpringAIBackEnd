@@ -41,9 +41,9 @@ public class ChatController {
 
 
     public ChatController(OpenAiChatModel chatModel, ImageModel imageModel , OpenAiAudioTranscriptionModel transcriptionModel) {
-         this.transcriptionModel = transcriptionModel;
         this.chatModel = chatModel;
         this.imageModel = imageModel;
+        this.transcriptionModel = transcriptionModel;
     }
 
     // Backend နိုး၊ မနိုး စစ်ဆေးရန် (Browser မှာ api.wintkaythweaung.com/api/ai/test လို့ ရိုက်ကြည့်ပါ)
