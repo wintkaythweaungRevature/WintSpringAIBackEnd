@@ -28,6 +28,8 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/audio/**").permitAll() // Transcription API ကို ခွင့်ပြုရန်
+                .requestMatchers("/api/ai/**").permitAll() // Transcription API ကို ခွင့်ပြုရန်
+               
                 .requestMatchers("/error").permitAll()         // ✅ Error တက်ရင် 403 မပြဘဲ Error message ပြရန် လိုအပ်သည်
                 .anyRequest().permitAll()                     // ကျန်တဲ့ request အားလုံးကိုလည်း test အနေနဲ့ ခွင့်ပြုထားသည်
             );
