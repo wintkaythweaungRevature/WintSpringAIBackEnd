@@ -26,6 +26,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             // 3. Request permissions သတ်မှတ်ခြင်း
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/api/audio/**").permitAll() // Transcription API ကို ခွင့်ပြုရန်
                 .requestMatchers("/error").permitAll()         // ✅ Error တက်ရင် 403 မပြဘဲ Error message ပြရန် လိုအပ်သည်
                 .anyRequest().permitAll()                     // ကျန်တဲ့ request အားလုံးကိုလည်း test အနေနဲ့ ခွင့်ပြုထားသည်
@@ -46,7 +47,11 @@ public class SecurityConfig {
         ));
         
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(Arrays.asList("*")); // Headers အားလုံးကို လက်ခံရန်
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", 
+        "Content-Type", 
+        "Accept", 
+        "X-Requested-With", 
+        "Origin")); // Headers အားလုံးကို လက်ခံရန်
         configuration.setAllowCredentials(true);             // Cookies/Credentials ပါရင် လက်ခံရန်
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
