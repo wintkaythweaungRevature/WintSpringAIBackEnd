@@ -6,30 +6,20 @@ import org.springframework.ai.image.ImageResponse;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.web.bind.annotation.*;
 
-// Spring AI OpenAI
-import org.springframework.ai.openai.OpenAiAudioTranscriptionModel;
-import org.springframework.ai.openai.OpenAiAudioTranscriptionOptions;
-import org.springframework.ai.openai.api.OpenAiAudioApi;
-import org.springframework.ai.openai.audio.transcription.AudioTranscriptionPrompt;
-import org.springframework.ai.openai.audio.transcription.AudioTranscriptionResponse;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.util.Collections;
 import java.util.Map;
 
-// // အဓိက ပြင်ဆင်ထားသော အပိုင်း (CORS ခွင့်ပြုချက်)
-// @CrossOrigin(origins = {
-//     "http://localhost:3000",                // Local development အတွက်
-//     "https://wintkaythweaung.com",          // Live domain အတွက်
-//     "https://www.wintkaythweaung.com",
-//    "https://api.wintaibot.com",
-//     "https://www.wintaibot.com",
-//    "https://wintaibot.com",
-//     "https://main.dk6jk3fcod2l.amplifyapp.com",
-//     "https://springai.pages.dev"
-// }, allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS})
+// အဓိက ပြင်ဆင်ထားသော အပိုင်း (CORS ခွင့်ပြုချက်)
+@CrossOrigin(origins = {
+    "http://localhost:3000",                // Local development အတွက်
+    "https://wintkaythweaung.com",          // Live domain အတွက်
+    "https://www.wintkaythweaung.com",
+   "https://api.wintaibot.com",
+    "https://www.wintaibot.com",
+   "https://wintaibot.com",
+    "https://main.dk6jk3fcod2l.amplifyapp.com",
+    "https://springai.pages.dev"
+}, allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS})
 @RequestMapping("/api/ai")
 @RestController
 public class ChatController {
@@ -37,13 +27,10 @@ public class ChatController {
 
     private final OpenAiChatModel chatModel;
     private final ImageModel imageModel;
-     private final OpenAiAudioTranscriptionModel transcriptionModel;
 
-
-    public ChatController(OpenAiChatModel chatModel, ImageModel imageModel , OpenAiAudioTranscriptionModel transcriptionModel) {
+    public ChatController(OpenAiChatModel chatModel, ImageModel imageModel) {
         this.chatModel = chatModel;
         this.imageModel = imageModel;
-        this.transcriptionModel = transcriptionModel;
     }
 
     // Backend နိုး၊ မနိုး စစ်ဆေးရန် (Browser မှာ api.wintkaythweaung.com/api/ai/test လို့ ရိုက်ကြည့်ပါ)
@@ -65,5 +52,4 @@ public class ChatController {
         String imageUrl = response.getResult().getOutput().getUrl();
         return Collections.singletonMap("url", imageUrl);
     }
-
 }
