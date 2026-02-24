@@ -27,7 +27,6 @@ public class ChatController {
 
     private final OpenAiChatModel chatModel;
     private final ImageModel imageModel;
-    private final OpenAiAudioTranscriptionModel transcriptionModel;
 
     public ChatController(OpenAiChatModel chatModel, ImageModel imageModel) {
         this.chatModel = chatModel;
@@ -53,5 +52,4 @@ public class ChatController {
         String imageUrl = response.getResult().getOutput().getUrl();
         return Collections.singletonMap("url", imageUrl);
     }
-
 }
