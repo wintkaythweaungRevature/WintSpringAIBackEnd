@@ -27,6 +27,8 @@ public class ChatController {
 
     private final OpenAiChatModel chatModel;
     private final ImageModel imageModel;
+     private final OpenAiAudioTranscriptionModel transcriptionModel;
+
 
     public ChatController(OpenAiChatModel chatModel, ImageModel imageModel) {
         this.chatModel = chatModel;
@@ -51,5 +53,26 @@ public class ChatController {
         ImageResponse response = imageModel.call(new ImagePrompt(prompt));
         String imageUrl = response.getResult().getOutput().getUrl();
         return Collections.singletonMap("url", imageUrl);
+    }
+
+    @PostMapping("/transcribe")
+    public ResponseEntity<String> transcribe(@RequestParam("file") MultipartFile file) {
+        try {
+            // Options setup
+            var transcriptionOptions = OpenAiAudioTranscriptionOptions.builder()
+                .withResponseFormat(OpenAiAudioApi.TranscriptResponseFormat.TEXT)
+                .withLanguage("en")
+                .withTemperature(0f)
+                .build();
+
+            // ✅ This now matches the corrected imports above
+            AudioTranscriptionPrompt transcriptionRequest = new AudioTranscriptionPrompt(file.getResource(), transcriptionOptions);
+            
+            AudioTranscriptionResponse response = transcriptionModel.call(transcriptionRequest);
+
+            return new ResponseEntity<>(response.getResult().getOutput(), HttpStatus.OK);
+        } catch (Exception e) {
+            return new ResponseEntity<>("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }
