@@ -19,17 +19,17 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.Collections;
 import java.util.Map;
 
-// အဓိက ပြင်ဆင်ထားသော အပိုင်း (CORS ခွင့်ပြုချက်)
-@CrossOrigin(origins = {
-    "http://localhost:3000",                // Local development အတွက်
-    "https://wintkaythweaung.com",          // Live domain အတွက်
-    "https://www.wintkaythweaung.com",
-   "https://api.wintaibot.com",
-    "https://www.wintaibot.com",
-   "https://wintaibot.com",
-    "https://main.dk6jk3fcod2l.amplifyapp.com",
-    "https://springai.pages.dev"
-}, allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS})
+// // အဓိက ပြင်ဆင်ထားသော အပိုင်း (CORS ခွင့်ပြုချက်)
+// @CrossOrigin(origins = {
+//     "http://localhost:3000",                // Local development အတွက်
+//     "https://wintkaythweaung.com",          // Live domain အတွက်
+//     "https://www.wintkaythweaung.com",
+//    "https://api.wintaibot.com",
+//     "https://www.wintaibot.com",
+//    "https://wintaibot.com",
+//     "https://main.dk6jk3fcod2l.amplifyapp.com",
+//     "https://springai.pages.dev"
+// }, allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS})
 @RequestMapping("/api/ai")
 @RestController
 public class ChatController {
