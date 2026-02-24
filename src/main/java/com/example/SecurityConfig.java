@@ -26,6 +26,7 @@ public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Excepti
             // ✅ OPTIONS request များကို အားလုံးအတွက် permit ပေးရန်
             .requestMatchers(org.springframework.http.HttpMethod.OPTIONS, "/**").permitAll()
             .requestMatchers("/api/audio/**").permitAll() 
+            .requestMatchers(HttpMethod.POST, "/api/ai/transcribe").permitAll()
             .requestMatchers("/api/ai/**").permitAll() 
             .requestMatchers("/error").permitAll()
             .anyRequest().permitAll()
