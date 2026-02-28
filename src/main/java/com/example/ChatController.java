@@ -56,13 +56,23 @@ public ResponseEntity<Map<String, String>> analyzePdf(
         @RequestParam(value = "prompt", defaultValue = "Analyze this document.") String userPrompt
 ) throws IOException {
 
-    // Step 1: Extract text
     String pdfText = readPdf(file);
 
-    // Step 2: Get AI response
-    String aiResponse = chatModel.call("Analyze this document and provide a summary: " + pdfText);
+    // ✅ FIXED PROMPT: Explicitly tell the AI to return JSON
+    String aiPrompt = """
+            Analyze the following text and return ONLY a JSON object with this structure:
+            {
+              "summary": "a brief summary",
+              "table_headers": ["Header1", "Header2"],
+              "table_rows": [["Row1Col1", "Row1Col2"]],
+              "insights": ["insight1"]
+            }
+            Text to analyze:
+            %s
+            """.formatted(pdfText);
 
-    // ✅ Step 3: Return as a Map so React sees { "analysis": "..." }
+    String aiResponse = chatModel.call(aiPrompt);
+
     return ResponseEntity.ok(Map.of("analysis", aiResponse));
 }
 
