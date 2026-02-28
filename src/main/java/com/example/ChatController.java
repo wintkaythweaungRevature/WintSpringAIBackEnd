@@ -84,13 +84,14 @@ public class ChatController {
                     "rawText", pdfText
                 ));
     }
-
-    private String readPdf(MultipartFile file) throws IOException {
-        try (PDDocument document = PDDocument.load(file.getInputStream())) {
-            PDFTextStripper stripper = new PDFTextStripper();
-            return stripper.getText(document);
-        }
+private String readPdf(MultipartFile file) throws IOException {
+    try (PDDocument document = PDDocument.load(file.getInputStream())) {
+        PDFTextStripper stripper = new PDFTextStripper();
+        stripper.setEndPage(3); // Only process first 3 pages to prevent 502 timeout
+        return stripper.getText(document);
     }
+}
+    
 
     @PostMapping("/chatdoc")
     public ResponseEntity<Map<String, String>> chatWithDoc(@RequestBody Map<String, String> request) {
