@@ -49,31 +49,50 @@ public class ChatController {
         ImageResponse response = imageModel.call(new ImagePrompt(prompt));
         String imageUrl = response.getResult().getOutput().getUrl();
         return Collections.singletonMap("url", imageUrl);
-    }
-@PostMapping("/analyze-pdf")
+    }@PostMapping("/analyze-pdf")
 public ResponseEntity<Map<String, String>> analyzePdf(
         @RequestParam("file") MultipartFile file,
-        @RequestParam(value = "prompt", defaultValue = "Analyze") String userPrompt
-) throws IOException {
-    // Step 1: Extract limited text to prevent timeouts (502 errors)
-    String pdfText = readPdf(file); 
-
-    // Step 2: Use a strict, short prompt for faster AI response
-    String aiPrompt = "Return ONLY JSON: {\"summary\":\"...\",\"table_headers\":[],\"table_rows\":[[]],\"insights\":[]}. Text: " + pdfText;
-
+        @RequestParam(value = "prompt", defaultValue = "Extract data") String userPrompt
+) {
     try {
+        // 1. Extract text from PDF
+        String pdfText = readPdf(file);
+
+        // 2. Optimized Prompt for Excel-friendly JSON
+        String aiPrompt = """
+            Return ONLY a valid JSON object with no markdown formatting.
+            Structure:
+            {
+              "summary": "Short summary",
+              "table_headers": ["Header1", "Header2"],
+              "table_rows": [["Row1Val1", "Row1Val2"], ["Row2Val1", "Row2Val2"]],
+              "insights": ["Point1"]
+            }
+            Text: %s
+            """.formatted(pdfText);
+
+        // 3. Call AI Model
         String aiResponse = chatModel.call(aiPrompt);
-        return ResponseEntity.ok(Map.of("analysis", aiResponse));
+
+        // 4. Clean the response (removes ```json ... ``` if AI adds it)
+        String cleanResponse = aiResponse.replaceAll("(?s)```json\\s*|```", "").trim();
+
+        return ResponseEntity.ok(Map.of("analysis", cleanResponse));
+
     } catch (Exception e) {
-        // Return a valid JSON error object so the frontend doesn't get 'undefined'
-        return ResponseEntity.status(500).body(Map.of("analysis", "{\"summary\":\"AI Timeout\"}"));
+        e.printStackTrace();
+        // Fallback JSON so frontend doesn't crash
+        return ResponseEntity.status(500).body(Map.of("analysis", 
+            "{\"summary\":\"Error processing PDF\", \"table_headers\":[\"Error\"], \"table_rows\":[[\"" + e.getMessage() + "\"]], \"insights\":[]}"));
     }
 }
 
 private String readPdf(MultipartFile file) throws IOException {
+    // Use try-with-resources to ensure the document is closed properly
     try (PDDocument document = PDDocument.load(file.getInputStream())) {
         PDFTextStripper stripper = new PDFTextStripper();
-        stripper.setEndPage(2); // Reduced to 2 pages to fix 502 errors
+        stripper.setStartPage(1);
+        stripper.setEndPage(2); // Keep it to 2 pages to avoid 502/Timeout
         return stripper.getText(document);
     }
 }
