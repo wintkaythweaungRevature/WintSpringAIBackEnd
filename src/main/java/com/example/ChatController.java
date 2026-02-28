@@ -60,32 +60,46 @@ public class ChatController {
         return Collections.singletonMap("url", imageUrl);
     }
 
-    @PostMapping("/convert-pdf-to-excel")
-    public ResponseEntity<byte[]> convertToExcel(@RequestParam("file") MultipartFile file) throws IOException {
-        // 1. Extract text from PDF
-        String pdfContent = readPdf(file); 
-        
-        // 2. Create Excel
-        Workbook workbook = new XSSFWorkbook();
-        Sheet sheet = workbook.createSheet("Spending Analysis");
-        
-        String[] lines = pdfContent.split("\\n");
-        for (int i = 0; i < lines.length; i++) {
-            Row row = sheet.createRow(i);
-            row.createCell(0).setCellValue(lines[i]);
-        }
+    // ✅ NEW endpoint - AI analyzes PDF and returns structured JSON
+    @PostMapping("/analyze-pdf")
+    public ResponseEntity<String> analyzePdf(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "prompt", defaultValue = "Analyze this document and extract all important information.") String userPrompt
+    ) throws IOException {
 
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        workbook.write(out);
-        workbook.close();
+        // Step 1: Extract text from PDF using PDFBox
+        String pdfText = readPdf(file);
+
+        // Step 2: Send extracted text to AI with structured prompt
+        String aiPrompt = """
+                You are a data extraction assistant. Analyze the following PDF content and return ONLY a JSON object with this exact structure, no extra text:
+                {
+                  "summary": "2-3 sentence summary of the document",
+                  "table_headers": ["Column1", "Column2", "Column3"],
+                  "table_rows": [["value1", "value2", "value3"]],
+                  "insights": ["Key insight 1", "Key insight 2"]
+                }
+
+                Rules:
+                - Extract ALL meaningful structured data into table_headers and table_rows
+                - If no clear table exists, use ["Field", "Value"] as headers and key info as rows
+                - All values must be strings
+                - Return ONLY the JSON, nothing else
+
+                User focus: %s
+
+                PDF Content:
+                %s
+                """.formatted(userPrompt, pdfText);
+
+        String aiResponse = chatModel.call(aiPrompt);
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=spending.xlsx")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(out.toByteArray());
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(aiResponse);
     }
 
-    // ✅ အသစ်ထည့်လိုက်သော Method (Missing readPdf logic)
+    // ✅ Shared helper method used by both endpoints
     private String readPdf(MultipartFile file) throws IOException {
         try (PDDocument document = PDDocument.load(file.getInputStream())) {
             PDFTextStripper stripper = new PDFTextStripper();
