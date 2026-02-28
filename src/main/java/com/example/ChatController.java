@@ -106,4 +106,28 @@ public class ChatController {
             return stripper.getText(document);
         }
     }
-}
+
+    @PostMapping("/chatdoc")
+    public ResponseEntity<Map<String, String>> chatWithDoc(@RequestBody Map<String, String> request) {
+        String documentText = request.get("documentText");
+        String userQuestion = request.get("question");
+
+        // Step 1: Combine context and question
+        String fullPrompt = """
+                You are the 'Smart Parser Wizard'. 
+                Use the following document content to answer the user's question.
+                If the answer isn't in the document, say you don't know.
+                
+                Document Content:
+                %s
+                
+                User Question: %s
+                """.formatted(documentText, userQuestion);
+
+        // Step 2: Use your existing chatModel (OpenAiChatModel)
+        String aiResponse = chatModel.call(fullPrompt); 
+
+        // Step 3: Return as a Map so React can read it as JSON
+        return ResponseEntity.ok(Map.of("answer", aiResponse));
+    }
+} // Final closing bracket for the class
