@@ -51,39 +51,25 @@ public class ChatController {
         return Collections.singletonMap("url", imageUrl);
     }
 
-    // ✅ FIXED: Return type changed to Map<String, String> to match the body
-    @PostMapping("/analyze-pdf")
+  @PostMapping("/analyze-pdf")
     public ResponseEntity<Map<String, String>> analyzePdf(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "prompt", defaultValue = "Analyze this document.") String userPrompt
     ) throws IOException {
 
-        // Step 1: Extract text
         String pdfText = readPdf(file);
 
-        // Step 2: AI Prompt
-        String aiPrompt = """
-                You are a data extraction assistant. Analyze the PDF content and return ONLY a JSON object:
-                {
-                  "summary": "summary here",
-                  "table_headers": ["H1", "H2"],
-                  "table_rows": [["R1C1", "R1C2"]],
-                  "insights": ["insight"]
-                }
-                PDF Content:
-                %s
-                """.formatted(pdfText);
+        String aiPrompt = "Analyze the following content and provide a detailed report:\n" + pdfText;
 
         String aiResponse = chatModel.call(aiPrompt);
 
-        // ✅ Step 3: Return Map so React sees data.analysis
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(Map.of(
-                    "analysis", aiResponse,
-                    "rawText", pdfText
-                ));
+        // ✅ This MUST return a Map so the Frontend can read data.analysis
+        return ResponseEntity.ok(Map.of(
+            "analysis", aiResponse,
+            "rawText", pdfText
+        ));
     }
+    
 private String readPdf(MultipartFile file) throws IOException {
     try (PDDocument document = PDDocument.load(file.getInputStream())) {
         PDFTextStripper stripper = new PDFTextStripper();
