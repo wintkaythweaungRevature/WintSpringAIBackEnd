@@ -50,26 +50,22 @@ public class ChatController {
         String imageUrl = response.getResult().getOutput().getUrl();
         return Collections.singletonMap("url", imageUrl);
     }
+@PostMapping("/analyze-pdf")
+public ResponseEntity<Map<String, String>> analyzePdf(
+        @RequestParam("file") MultipartFile file,
+        @RequestParam(value = "prompt", defaultValue = "Analyze this document.") String userPrompt
+) throws IOException {
 
-  @PostMapping("/analyze-pdf")
-    public ResponseEntity<Map<String, String>> analyzePdf(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam(value = "prompt", defaultValue = "Analyze this document.") String userPrompt
-    ) throws IOException {
+    // Step 1: Extract text
+    String pdfText = readPdf(file);
 
-        String pdfText = readPdf(file);
+    // Step 2: Get AI response
+    String aiResponse = chatModel.call("Analyze this document and provide a summary: " + pdfText);
 
-        String aiPrompt = "Analyze the following content and provide a detailed report:\n" + pdfText;
+    // ✅ Step 3: Return as a Map so React sees { "analysis": "..." }
+    return ResponseEntity.ok(Map.of("analysis", aiResponse));
+}
 
-        String aiResponse = chatModel.call(aiPrompt);
-
-        // ✅ This MUST return a Map so the Frontend can read data.analysis
-        return ResponseEntity.ok(Map.of(
-            "analysis", aiResponse,
-            "rawText", pdfText
-        ));
-    }
-    
 private String readPdf(MultipartFile file) throws IOException {
     try (PDDocument document = PDDocument.load(file.getInputStream())) {
         PDFTextStripper stripper = new PDFTextStripper();
