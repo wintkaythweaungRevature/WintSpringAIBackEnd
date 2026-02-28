@@ -53,44 +53,31 @@ public class ChatController {
 @PostMapping("/analyze-pdf")
 public ResponseEntity<Map<String, String>> analyzePdf(
         @RequestParam("file") MultipartFile file,
-        @RequestParam(value = "prompt", defaultValue = "Analyze this document.") String userPrompt
+        @RequestParam(value = "prompt", defaultValue = "Analyze") String userPrompt
 ) throws IOException {
+    // Step 1: Extract limited text to prevent timeouts (502 errors)
+    String pdfText = readPdf(file); 
 
-    String pdfText = readPdf(file);
-    
-    // ✅ SYSTEM INSTRUCTION: Forces strict JSON and prevents timeouts by limiting scope
-    String aiPrompt = """
-            You are a data extractor. Return ONLY a valid JSON object. 
-            No markdown blocks, no preamble.
-            
-            {
-              "summary": "2-sentence summary",
-              "table_headers": ["Column1", "Column2"],
-              "table_rows": [["Data1", "Data2"]],
-              "insights": ["Point 1"]
-            }
-
-            Document Text:
-            %s
-            """.formatted(pdfText);
+    // Step 2: Use a strict, short prompt for faster AI response
+    String aiPrompt = "Return ONLY JSON: {\"summary\":\"...\",\"table_headers\":[],\"table_rows\":[[]],\"insights\":[]}. Text: " + pdfText;
 
     try {
         String aiResponse = chatModel.call(aiPrompt);
-        // Ensure we don't return a null analysis
-        return ResponseEntity.ok(Map.of("analysis", aiResponse != null ? aiResponse : "{}"));
+        return ResponseEntity.ok(Map.of("analysis", aiResponse));
     } catch (Exception e) {
-        // Return a valid JSON error so the frontend doesn't crash on "undefined"
-        return ResponseEntity.status(500).body(Map.of("analysis", "{\"summary\": \"Error: AI Timeout\"}"));
+        // Return a valid JSON error object so the frontend doesn't get 'undefined'
+        return ResponseEntity.status(500).body(Map.of("analysis", "{\"summary\":\"AI Timeout\"}"));
     }
 }
 
 private String readPdf(MultipartFile file) throws IOException {
     try (PDDocument document = PDDocument.load(file.getInputStream())) {
         PDFTextStripper stripper = new PDFTextStripper();
-        stripper.setEndPage(3); // Only process first 3 pages to prevent 502 timeout
+        stripper.setEndPage(2); // Reduced to 2 pages to fix 502 errors
         return stripper.getText(document);
     }
 }
+
     
 
     @PostMapping("/chatdoc")
