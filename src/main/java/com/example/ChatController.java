@@ -57,23 +57,31 @@ public ResponseEntity<Map<String, String>> analyzePdf(
 ) throws IOException {
 
     String pdfText = readPdf(file);
-
-    // ✅ FIXED PROMPT: Explicitly tell the AI to return JSON
+    
+    // ✅ SYSTEM INSTRUCTION: Forces strict JSON and prevents timeouts by limiting scope
     String aiPrompt = """
-            Analyze the following text and return ONLY a JSON object with this structure:
+            You are a data extractor. Return ONLY a valid JSON object. 
+            No markdown blocks, no preamble.
+            
             {
-              "summary": "a brief summary",
-              "table_headers": ["Header1", "Header2"],
-              "table_rows": [["Row1Col1", "Row1Col2"]],
-              "insights": ["insight1"]
+              "summary": "2-sentence summary",
+              "table_headers": ["Column1", "Column2"],
+              "table_rows": [["Data1", "Data2"]],
+              "insights": ["Point 1"]
             }
-            Text to analyze:
+
+            Document Text:
             %s
             """.formatted(pdfText);
 
-    String aiResponse = chatModel.call(aiPrompt);
-
-    return ResponseEntity.ok(Map.of("analysis", aiResponse));
+    try {
+        String aiResponse = chatModel.call(aiPrompt);
+        // Ensure we don't return a null analysis
+        return ResponseEntity.ok(Map.of("analysis", aiResponse != null ? aiResponse : "{}"));
+    } catch (Exception e) {
+        // Return a valid JSON error so the frontend doesn't crash on "undefined"
+        return ResponseEntity.status(500).body(Map.of("analysis", "{\"summary\": \"Error: AI Timeout\"}"));
+    }
 }
 
 private String readPdf(MultipartFile file) throws IOException {
