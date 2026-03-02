@@ -3,21 +3,25 @@ package com.example;
 import org.springframework.ai.image.ImageModel;
 import org.springframework.ai.image.ImagePrompt;
 import org.springframework.ai.image.ImageResponse;
+import org.springframework.ai.openai.OpenAiAudioTranscriptionModel;
+import org.springframework.ai.openai.OpenAiAudioTranscriptionOptions;
 import org.springframework.ai.openai.OpenAiChatModel;
+import org.springframework.ai.openai.api.OpenAiAudioApi;
+import org.springframework.ai.openai.audio.transcription.AudioTranscriptionPrompt;
+import org.springframework.ai.openai.audio.transcription.AudioTranscriptionResponse;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity; // Added
-import org.springframework.http.HttpHeaders;    // Added
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;      // Added
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Collections;
 import java.util.Map;
-import java.io.ByteArrayOutputStream; // Added
+import java.io.File;
 import java.io.IOException;
 
 // Apache POI & PDFBox
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 
@@ -37,10 +41,12 @@ public class ChatController {
 
     private final OpenAiChatModel chatModel;
     private final ImageModel imageModel;
+    private final OpenAiAudioTranscriptionModel transcriptionModel;
 
-    public ChatController(OpenAiChatModel chatModel, ImageModel imageModel) {
+    public ChatController(OpenAiChatModel chatModel, ImageModel imageModel ,OpenAiAudioTranscriptionModel transcriptionModel) {
         this.chatModel = chatModel;
         this.imageModel = imageModel;
+        this.transcriptionModel = transcriptionModel;
     }
 
     @GetMapping("/test")
@@ -104,6 +110,32 @@ public class ChatController {
         try (PDDocument document = PDDocument.load(file.getInputStream())) {
             PDFTextStripper stripper = new PDFTextStripper();
             return stripper.getText(document);
+        }
+    }
+    @PostMapping("/transcribe")
+    public ResponseEntity<String> transcribeAudio(@RequestParam("file") MultipartFile file) throws IOException {
+        // Create a temporary file to store the upload
+        File tempFile = File.createTempFile("audio", ".wav");
+        if (tempFile == null) {
+            return new ResponseEntity<>("Failed to create temporary file", HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        file.transferTo(tempFile);
+
+        try {
+            OpenAiAudioTranscriptionOptions options = OpenAiAudioTranscriptionOptions.builder()
+                    .withResponseFormat(OpenAiAudioApi.TranscriptResponseFormat.TEXT)
+                    .withLanguage("en")
+                    .withTemperature(0f)
+                    .build();
+
+            FileSystemResource audioFileResource = new FileSystemResource(tempFile);
+            AudioTranscriptionPrompt prompt = new AudioTranscriptionPrompt(audioFileResource, options);
+            AudioTranscriptionResponse response = transcriptionModel.call(prompt);
+
+            return new ResponseEntity<>(response.getResult().getOutput(), HttpStatus.OK);
+        } finally {
+            // Always delete temp files
+            tempFile.delete();
         }
     }
 }
