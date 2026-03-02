@@ -119,27 +119,24 @@ public class ChatController {
             return stripper.getText(document);
         }
     }
+    // Audio transcription endpoint
     @PostMapping("/transcribe")
-    public ResponseEntity<String> transcribeAudio(@RequestParam("file") MultipartFile file) throws IOException {
-        // Create a temporary file to store the upload
-        File tempFile = File.createTempFile("audio", ".wav");
-        file.transferTo(tempFile);
+   
+        public ResponseEntity<String> transcribeAudio
+        (@RequestParam("file") MultipartFile file) throws IOException {
+           File tempfile = File.createTempFile("audio", "wav");
+              file.transferTo(tempfile);
+              OpenAiAudioTranscriptionOptions transcriptionOptions = OpenAiAudioTranscriptionOptions.builder()
+              .withResponseFormat(OpenAiAudioApi.TranscriptResponseFormat.TEXT)
+              .withLanguage("en")
+              .withTemperature(0f)
+              .build();
+              var audiofile = new FileSystemResource(tempfile);
+              AudioTranscriptionPrompt transcriptionRequest = new AudioTranscriptionPrompt(audiofile,transcriptionOptions);
+              AudioTranscriptionResponse response = transcriptionModel.call(transcriptionRequest);
+              tempfile.delete();
 
-        try {
-            OpenAiAudioTranscriptionOptions options = OpenAiAudioTranscriptionOptions.builder()
-                    .withResponseFormat(OpenAiAudioApi.TranscriptResponseFormat.TEXT)
-                    .withLanguage("en")
-                    .withTemperature(0f)
-                    .build();
-
-            FileSystemResource audioFileResource = new FileSystemResource(tempFile);
-            AudioTranscriptionPrompt prompt = new AudioTranscriptionPrompt(audioFileResource, options);
-            AudioTranscriptionResponse response = transcriptionModel.call(prompt);
-
-            return new ResponseEntity<>(response.getResult().getOutput(), HttpStatus.OK);
-        } finally {
-            // Always delete temp files
-            tempFile.delete();
+              return new ResponseEntity<>(response.getResult().getOutput(), HttpStatus.OK);
         }
     
 }
