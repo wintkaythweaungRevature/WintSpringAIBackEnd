@@ -49,11 +49,14 @@ public class ChatController {
     private final OpenAiChatModel chatModel;
     private final ImageModel imageModel;
     private final OpenAiAudioTranscriptionModel transcriptionModel;
+    private final EmailGeneratorService emailService;
 
-    public ChatController(OpenAiChatModel chatModel, ImageModel imageModel ,OpenAiAudioTranscriptionModel transcriptionModel) {
+    public ChatController(OpenAiChatModel chatModel, ImageModel imageModel ,
+        OpenAiAudioTranscriptionModel transcriptionModel, EmailGeneratorService emailService) {
         this.chatModel = chatModel;
         this.imageModel = imageModel;
         this.transcriptionModel = transcriptionModel;
+        this.emailService = emailService;       
     }
 
     @GetMapping("/test")
@@ -137,21 +140,8 @@ public class ChatController {
 
               return new ResponseEntity<>(response.getResult().getOutput(), HttpStatus.OK);
         }
-@GetMapping("/reply")
-public ResponseEntity<String> aiApply(@RequestParam String content) {
-    String prompt = """
-        I am applying for a job based on this email content:
-        ---
-        %s
-        ---
-        Please write a professional application email. 
-        Focus on being persuasive and highlighting potential value.
-        """.formatted(content);
-        
-    String aiResponse = chatModel.call(prompt);
-    
-    return ResponseEntity.ok()
-            .contentType(MediaType.TEXT_PLAIN) // Tells the browser this is plain text
-            .body(aiResponse);
+      @PostMapping("/reply")
+public ResponseEntity<String> aiReply(@RequestBody EmailRequest request) { // MUST have @RequestBody
+    return ResponseEntity.ok(emailService.generateEmail(request));
 }
 }
