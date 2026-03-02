@@ -120,9 +120,8 @@ public class ChatController {
         }
     }
     // Audio transcription endpoint
-    @PostMapping("/transcribe")
-   
-        public ResponseEntity<String> transcribeAudio
+          @PostMapping("/transcribe")
+           public ResponseEntity<String> transcribeAudio
         (@RequestParam("file") MultipartFile file) throws IOException {
            File tempfile = File.createTempFile("audio", "wav");
               file.transferTo(tempfile);
@@ -138,5 +137,21 @@ public class ChatController {
 
               return new ResponseEntity<>(response.getResult().getOutput(), HttpStatus.OK);
         }
+@GetMapping("/reply")
+public ResponseEntity<String> aiApply(@RequestParam String content) {
+    String prompt = """
+        I am applying for a job based on this email content:
+        ---
+        %s
+        ---
+        Please write a professional application email. 
+        Focus on being persuasive and highlighting potential value.
+        """.formatted(content);
+        
+    String aiResponse = chatModel.call(prompt);
     
+    return ResponseEntity.ok()
+            .contentType(MediaType.TEXT_PLAIN) // Tells the browser this is plain text
+            .body(aiResponse);
+}
 }
