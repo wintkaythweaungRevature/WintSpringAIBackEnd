@@ -49,13 +49,14 @@ public class ChatController {
     private final OpenAiChatModel chatModel;
     private final ImageModel imageModel;
     private final OpenAiAudioTranscriptionModel transcriptionModel;
-   
+    private final EmailGeneratorService emailGeneratorService;
 
     public ChatController(OpenAiChatModel chatModel, ImageModel imageModel ,
-        OpenAiAudioTranscriptionModel transcriptionModel) {
+        OpenAiAudioTranscriptionModel transcriptionModel, EmailGeneratorService emailGeneratorService) {
         this.chatModel = chatModel;
         this.imageModel = imageModel;
         this.transcriptionModel = transcriptionModel;
+        this.emailGeneratorService = emailGeneratorService;
     
     }
 
@@ -140,5 +141,12 @@ public class ChatController {
 
               return new ResponseEntity<>(response.getResult().getOutput(), HttpStatus.OK);
         }
+
+        @PostMapping("/reply")
+    public String generateReply(@RequestBody Map<String, String> payload) {
+        String emailContent = payload.get("emailContent");
+        String tone = payload.get("tone");
+        return emailGeneratorService.generateEmailReply(emailContent, tone);
+    }
      
 }
