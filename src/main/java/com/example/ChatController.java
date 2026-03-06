@@ -33,7 +33,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 
 @CrossOrigin(origins = {
-    "http://localhost:3000",
+    "http://localhost:3000",    "http://localhost:3001",
     "https://wintkaythweaung.com",
     "https://www.wintkaythweaung.com",
     "https://api.wintaibot.com",
@@ -153,7 +153,6 @@ public class ChatController {
 public org.springframework.core.io.Resource getSitemap() {
     return new org.springframework.core.io.ClassPathResource("static/sitemap.xml");
 }
-     
      @PostMapping("/prepare-interview")
 public ResponseEntity<String> prepareInterview(
         @RequestParam("file") MultipartFile file,
@@ -163,47 +162,33 @@ public ResponseEntity<String> prepareInterview(
     // 1. Extract Resume Text
     String resumeText = readPdf(file);
 
-    // 2. Build the "Deep Analysis" Prompt
+    // 2. Build the Comprehensive Prompt
     String aiPrompt = """
-        You are an expert Technical Recruiter and Career Coach. 
-        Analyze the provided Job Description and User Resume.
+        You are an expert Technical Recruiter. Analyze the JD and Resume provided.
         
-        INPUT DATA:
-        Job Description: %s
-        User Resume: %s
+        JD: %s
+        Resume: %s
 
         TASK:
-        Generate a comprehensive interview preparation report in ONLY JSON format.
-        
-        SECTIONS REQUIRED:
-        1. MATCH_PERCENTAGE: A number between 0-100 based on skill alignment.
-        2. ANALYSIS: Exactly 10 lines of text covering:
-           - 3 Core Strengths (where the resume exceeds JD).
-           - 3 Critical Weaknesses (gaps in skills or experience).
-           - 4 Strategic advice points for the interview.
-        3. QUESTIONS: Exactly 30 questions total, categorized:
-           - 10 Technical (specific to the tech stack).
-           - 10 Behavioral (soft skills/leadership).
-           - 10 Role-specific (scenario-based).
-           Include "guidance" and "tips" for each.
-        4. FLASHCARDS: 10 study cards for complex technical terms found in the JD/Resume.
+        1. Compare keywords and experience to give a MATCH_PERCENTAGE (0-100).
+        2. Generate exactly 30 Interview Questions (10 Technical, 10 Behavioral, 10 Role-specific).
+        3. Generate exactly 20 Flashcards for key technical terms and concepts.
 
-        JSON STRUCTURE:
+        RETURN ONLY VALID JSON:
         {
           "match_percentage": 85,
-          "analysis": "Line 1... Line 10...",
-          "questions": [{"q": "...", "type": "Technical", "guidance": "...", "tips": "..."}],
+          "analysis": "10-line summary of keyword comparison and gaps.",
+          "questions": [{"q": "...", "type": "...", "guidance": "...", "tips": "..."}],
           "flashcards": [{"front": "...", "back": "..."}]
         }
-        
-        Return ONLY the JSON object.
         """.formatted(jobDescription, resumeText);
 
-    // 3. Call OpenAI
+    // 3. Call AI and Clean Response
     String aiResponse = chatModel.call(aiPrompt);
+    String cleanedJson = aiResponse.replaceAll("```json", "").replaceAll("```", "").trim();
 
     return ResponseEntity.ok()
             .contentType(MediaType.APPLICATION_JSON)
-            .body(aiResponse);
+            .body(cleanedJson);
 }
 }
