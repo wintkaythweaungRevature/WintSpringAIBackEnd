@@ -154,5 +154,56 @@ public org.springframework.core.io.Resource getSitemap() {
     return new org.springframework.core.io.ClassPathResource("static/sitemap.xml");
 }
      
-     
+     @PostMapping("/prepare-interview")
+public ResponseEntity<String> prepareInterview(
+        @RequestParam("file") MultipartFile file,
+        @RequestParam("jd") String jobDescription
+) throws IOException {
+
+    // 1. Extract Resume Text
+    String resumeText = readPdf(file);
+
+    // 2. Build the "Deep Analysis" Prompt
+    String aiPrompt = """
+        You are an expert Technical Recruiter and Career Coach. 
+        Analyze the provided Job Description and User Resume.
+        
+        INPUT DATA:
+        Job Description: %s
+        User Resume: %s
+
+        TASK:
+        Generate a comprehensive interview preparation report in ONLY JSON format.
+        
+        SECTIONS REQUIRED:
+        1. MATCH_PERCENTAGE: A number between 0-100 based on skill alignment.
+        2. ANALYSIS: Exactly 10 lines of text covering:
+           - 3 Core Strengths (where the resume exceeds JD).
+           - 3 Critical Weaknesses (gaps in skills or experience).
+           - 4 Strategic advice points for the interview.
+        3. QUESTIONS: Exactly 30 questions total, categorized:
+           - 10 Technical (specific to the tech stack).
+           - 10 Behavioral (soft skills/leadership).
+           - 10 Role-specific (scenario-based).
+           Include "guidance" and "tips" for each.
+        4. FLASHCARDS: 10 study cards for complex technical terms found in the JD/Resume.
+
+        JSON STRUCTURE:
+        {
+          "match_percentage": 85,
+          "analysis": "Line 1... Line 10...",
+          "questions": [{"q": "...", "type": "Technical", "guidance": "...", "tips": "..."}],
+          "flashcards": [{"front": "...", "back": "..."}]
+        }
+        
+        Return ONLY the JSON object.
+        """.formatted(jobDescription, resumeText);
+
+    // 3. Call OpenAI
+    String aiResponse = chatModel.call(aiPrompt);
+
+    return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(aiResponse);
+}
 }
