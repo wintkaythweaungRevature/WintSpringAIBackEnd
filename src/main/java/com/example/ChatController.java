@@ -20,6 +20,7 @@ import org.springframework.http.MediaType;      // Added
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.io.ByteArrayOutputStream; // Added
 import java.io.File;
@@ -148,5 +149,87 @@ public class ChatController {
         String tone = payload.get("tone");
         return emailGeneratorService.generateEmailReply(emailContent, tone);
     }
-     
+     // ✅ FLASHCARD ENDPOINT - AI generates interview flashcards
+    @PostMapping("/generate-flashcards")
+    public ResponseEntity<String> generateFlashcards(@RequestBody Map<String, String> payload) {
+        String jdText = payload.get("jd");
+        String cvText = payload.get("cv");
+
+        if (jdText == null || cvText == null) {
+            return ResponseEntity.badRequest().body("{\"error\": \"Missing JD or CV content\"}");
+        }
+
+        // AI ကို Flashcard ထုတ်ခိုင်းမည့် Prompt
+        String flashcardPrompt = """
+                You are an expert interview coach. Based on the following Job Description and Candidate CV, 
+                generate 5-6 high-quality interview flashcards. 
+                Each flashcard must have a 'question' and a 'answer' (focused on key talking points).
+                
+                Return ONLY a JSON array of objects with this exact structure:
+                [
+                  { "q": "Question here", "a": "Answer/Key points here" },
+                  { "q": "Question here", "a": "Answer/Key points here" }
+                ]
+
+                Rules:
+                - Focus on matching the candidate's skills to the job requirements.
+                - Keep answers concise and easy to memorize.
+                - Return ONLY the JSON array. No conversational text.
+
+                JOB DESCRIPTION:
+                %s
+
+                CANDIDATE CV:
+                %s
+                """.formatted(jdText, cvText);
+
+        try {
+            String aiResponse = chatModel.call(flashcardPrompt);
+            
+            // Clean up the response if AI includes markdown (like ```json ... ```)
+            String cleanedResponse = aiResponse.replaceAll("```json", "").replaceAll("```", "").trim();
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(cleanedResponse);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("{\"error\": \"AI generation failed: " + e.getMessage() + "\"}");
+        }
+    }
+
+    // ✅ NEW: PDF Export for Flashcards
+    @PostMapping("/flashcards-pdf")
+    public ResponseEntity<byte[]> exportFlashcardsPdf(@RequestBody List<Map<String, String>> flashcards) throws IOException {
+        try (PDDocument document = new PDDocument()) {
+            org.apache.pdfbox.pdmodel.PDPage page = new org.apache.pdfbox.pdmodel.PDPage();
+            document.addPage(page);
+
+            try (org.apache.pdfbox.pdmodel.PDPageContentStream contentStream = new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
+                contentStream.beginText();
+                contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA_BOLD, 16);
+                contentStream.newLineAtOffset(50, 750);
+                contentStream.showText("Interview Preparation Flashcards");
+                contentStream.newLineAtOffset(0, -30);
+                contentStream.setFont(org.apache.pdfbox.pdmodel.font.PDType1Font.HELVETICA, 12);
+
+                for (Map<String, String> card : flashcards) {
+                    contentStream.showText("Q: " + card.get("q"));
+                    contentStream.newLineAtOffset(0, -20);
+                    contentStream.showText("A: " + card.get("a"));
+                    contentStream.newLineAtOffset(0, -30);
+                }
+                contentStream.endText();
+            }
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            document.save(baos);
+            
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("attachment", "Interview_Flashcards.pdf");
+
+            return new ResponseEntity<>(baos.toByteArray(), headers, HttpStatus.OK);
+        }
+    }
 }
