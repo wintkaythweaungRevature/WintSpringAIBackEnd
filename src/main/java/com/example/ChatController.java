@@ -42,7 +42,7 @@ import org.apache.pdfbox.text.PDFTextStripper;
     "https://main.dk6jk3fcod2l.amplifyapp.com",
     "https://springai.pages.dev"
 }, allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.OPTIONS})
-@RequestMapping("/api/ai")
+@RequestMapping
 @RestController
 public class ChatController {
 
