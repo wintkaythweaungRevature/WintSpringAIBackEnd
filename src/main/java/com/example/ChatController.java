@@ -9,24 +9,19 @@ import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.api.OpenAiAudioApi;
 import org.springframework.ai.openai.audio.transcription.AudioTranscriptionPrompt;
 import org.springframework.ai.openai.audio.transcription.AudioTranscriptionResponse;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.ResponseEntity; // Added
-import org.springframework.security.access.method.P;
-import org.springframework.http.HttpHeaders;    // Added
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;      // Added
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Collections;
-import java.util.Map;
-import java.io.ByteArrayOutputStream; // Added
+import java.util.Map;d
 import java.io.File;
 import java.io.IOException;
 
 // Apache POI & PDFBox
-import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.catalina.connector.Response;
 import org.apache.pdfbox.pdmodel.PDDocument;
