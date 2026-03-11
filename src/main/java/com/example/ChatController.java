@@ -12,9 +12,8 @@ import org.springframework.ai.openai.audio.transcription.AudioTranscriptionRespo
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.http.ResponseEntity; // Added
-import org.springframework.security.access.method.P;
-import org.springframework.http.HttpHeaders;    // Added
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;      // Added
 import org.springframework.web.multipart.MultipartFile;
