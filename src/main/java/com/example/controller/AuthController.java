@@ -48,7 +48,7 @@ public class AuthController {
                     user.getEmail(),
                     user.getFirstName(),
                     user.getLastName(),
-                    user.getMembershipType(),
+                    user.getMembershipType() != null ? user.getMembershipType() : "FREE",
                     user.getRole()
             ));
         } catch (IllegalArgumentException e) {

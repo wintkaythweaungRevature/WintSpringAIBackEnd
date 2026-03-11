@@ -39,6 +39,7 @@ public class UserService {
                 req.getFirstName(),
                 req.getLastName()
         );
+        user.setMembershipType("FREE");
         user = userRepo.save(user);
 
         Subscription sub = new Subscription();
@@ -59,8 +60,10 @@ public class UserService {
         if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Invalid email or password");
         }
+        ensureUserHasActiveSubscription(user);
+        String membershipType = user.getMembershipType() != null ? user.getMembershipType() : "FREE";
         String token = jwtService.generateToken(user.getEmail(), user.getId());
-        return new AuthResponse(token, user.getEmail(), user.getMembershipType(), user.getId());
+        return new AuthResponse(token, user.getEmail(), membershipType, user.getId());
     }
 
     public User findById(Long id) {
@@ -81,5 +84,23 @@ public class UserService {
         User user = findById(userId);
         user.setStripeCustomerId(stripeCustomerId);
         userRepo.save(user);
+    }
+
+    /** Ensures user has an active FREE subscription (for legacy users created before subscriptions). */
+    private void ensureUserHasActiveSubscription(User user) {
+        boolean hasActive = subscriptionRepo.findTopByUserAndStatusOrderByCurrentPeriodEndDesc(user, "active").isPresent();
+        if (!hasActive) {
+            Subscription sub = new Subscription();
+            sub.setUser(user);
+            sub.setPlanType(PlanType.FREE);
+            sub.setStatus("active");
+            sub.setCurrentPeriodStart(java.time.LocalDateTime.now());
+            sub.setCurrentPeriodEnd(java.time.LocalDateTime.now().plusYears(100));
+            subscriptionRepo.save(sub);
+            if (user.getMembershipType() == null) {
+                user.setMembershipType("FREE");
+                userRepo.save(user);
+            }
+        }
     }
 }

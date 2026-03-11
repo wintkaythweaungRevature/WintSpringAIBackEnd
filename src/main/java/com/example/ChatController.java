@@ -33,6 +33,7 @@ import org.apache.pdfbox.text.PDFTextStripper;
 
 @CrossOrigin(origins = {
     "http://localhost:3000",
+    "http://localhost:3001",
     "https://wintkaythweaung.com",
     "https://www.wintkaythweaung.com",
     "https://api.wintaibot.com",
