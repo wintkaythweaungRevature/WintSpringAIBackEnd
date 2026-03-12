@@ -43,6 +43,12 @@ public class StripeService {
     }
 
     public Map<String, String> createCheckoutSession(Long userId, String planType) throws Exception {
+        if (stripeApiKey == null || stripeApiKey.isBlank() || stripeApiKey.contains("your_stripe_key") || stripeApiKey.contains("sk_test_your")) {
+            throw new IllegalArgumentException("Stripe is not configured. Set STRIPE_SECRET_KEY in production.");
+        }
+        if (memberPriceId == null || memberPriceId.isBlank() || !memberPriceId.startsWith("price_")) {
+            throw new IllegalArgumentException("Invalid Stripe price. Set STRIPE_PRICE_MEMBER (e.g. price_1T9wNI64XP2DAi8NUBtSQg02) in production.");
+        }
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
