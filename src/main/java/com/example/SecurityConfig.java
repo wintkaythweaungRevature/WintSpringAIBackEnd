@@ -36,30 +36,26 @@ public class SecurityConfig {
     }
 
     @Bean
-public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-    http
-        .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-        .csrf(AbstractHttpConfigurer::disable)
-        .sessionManagement(session ->
-            session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-        .authorizeHttpRequests(auth -> auth
-            .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-            .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
-            
-            // 🆕 Allow Stripe Webhooks (No Auth)
-            .requestMatchers("/api/webhook/stripe").permitAll() 
-            
-            .requestMatchers("/api/ai/test", "/sitemap.xml", "/error").permitAll()
-            
-            // 🆕 Authenticated Subscription Endpoints
-            .requestMatchers("/api/subscription/**").authenticated() 
-            
-            .requestMatchers("/api/ai/**", "/api/audio/**").authenticated()
-            .anyRequest().authenticated()
-        )
-        .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-    return http.build();
-}
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(session ->
+                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                .requestMatchers("/api/webhook/**").permitAll()
+                .requestMatchers("/api/ai/test").permitAll()
+                .requestMatchers("/sitemap.xml").permitAll()
+                .requestMatchers("/error").permitAll()
+                .requestMatchers("/api/ai/**").authenticated()
+                .requestMatchers("/api/audio/**").authenticated()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
+        return http.build();
+    }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
