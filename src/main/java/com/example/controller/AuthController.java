@@ -60,7 +60,8 @@ public class AuthController {
                     user.getRole()
             ));
         } catch (IllegalArgumentException e) {
-            // User in token no longer exists (e.g. deleted from DB)
+            return ResponseEntity.status(401).build();
+        } catch (Exception e) {
             return ResponseEntity.status(401).build();
         }
     }
