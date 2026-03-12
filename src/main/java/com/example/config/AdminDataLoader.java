@@ -28,12 +28,12 @@ public class AdminDataLoader implements CommandLineRunner {
         if (userRepository.findByEmail("wint").isEmpty()) {
             User admin = new User("wint", passwordEncoder.encode("wint"), "Admin", "User");
             admin.setRole("ROLE_ADMIN");
-            admin.setMembershipType("ENTERPRISE");
+            admin.setMembershipType("MEMBER");
             admin = userRepository.save(admin);
 
             Subscription sub = new Subscription();
             sub.setUser(admin);
-            sub.setPlanType(PlanType.ENTERPRISE);
+            sub.setPlanType(PlanType.MEMBER);
             sub.setStatus("active");
             sub.setCurrentPeriodStart(java.time.LocalDateTime.now());
             sub.setCurrentPeriodEnd(java.time.LocalDateTime.now().plusYears(100));

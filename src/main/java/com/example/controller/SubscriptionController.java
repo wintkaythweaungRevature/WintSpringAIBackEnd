@@ -28,10 +28,14 @@ public class SubscriptionController {
 
     @PostMapping("/checkout")
     public ResponseEntity<?> createCheckout(@AuthenticationPrincipal UserDetails userDetails,
-                                          @RequestBody Map<String, String> body) {
+                                          @RequestBody(required = false) Map<String, String> body) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Authentication required"));
+        }
         try {
             User user = userService.findByEmail(userDetails.getUsername());
-            String plan = body.getOrDefault("plan", "BASIC");
+            String plan = (body != null ? body.get("plan") : null);
+            if (plan == null || plan.isBlank()) plan = "MEMBER";
             Map<String, String> session = stripeService.createCheckoutSession(user.getId(), plan);
             return ResponseEntity.ok(session);
         } catch (Exception e) {
