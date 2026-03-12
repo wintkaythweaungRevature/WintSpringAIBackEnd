@@ -92,11 +92,52 @@ public class StripeService {
         if (memberSub.isEmpty()) {
             throw new IllegalArgumentException("No active subscription to cancel");
         }
-        String stripeSubId = memberSub.get().getStripeSubscriptionId();
+        Subscription sub = memberSub.get();
+        String stripeSubId = sub.getStripeSubscriptionId();
         var params = com.stripe.param.SubscriptionUpdateParams.builder()
                 .setCancelAtPeriodEnd(true)
                 .build();
         com.stripe.model.Subscription.retrieve(stripeSubId).update(params);
+        sub.setCancelAtPeriodEnd(true);
+        subscriptionRepository.save(sub);
+    }
+
+    /** Reactivates a subscription that was set to cancel at period end (undo cancellation). */
+    public void reactivateSubscription(Long userId) throws Exception {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        var memberSub = subscriptionRepository.findTopByUserAndStatusOrderByCurrentPeriodEndDesc(user, "active")
+                .filter(s -> s.getPlanType() == PlanType.MEMBER && s.getStripeSubscriptionId() != null && s.isCancelAtPeriodEnd());
+        if (memberSub.isEmpty()) {
+            throw new IllegalArgumentException("No cancelled subscription to reactivate");
+        }
+        Subscription sub = memberSub.get();
+        String stripeSubId = sub.getStripeSubscriptionId();
+        var params = com.stripe.param.SubscriptionUpdateParams.builder()
+                .setCancelAtPeriodEnd(false)
+                .build();
+        com.stripe.model.Subscription.retrieve(stripeSubId).update(params);
+        sub.setCancelAtPeriodEnd(false);
+        subscriptionRepository.save(sub);
+    }
+
+    /** Verifies a Stripe checkout session and upgrades user if the payment completed. Returns true if user was upgraded. */
+    public boolean verifyCheckoutSession(Long userId, String sessionId) throws Exception {
+        var session = com.stripe.model.checkout.Session.retrieve(sessionId);
+        if (!"complete".equals(session.getStatus()) && !"paid".equals(session.getPaymentStatus())) {
+            return false;
+        }
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (session.getCustomer() != null && (user.getStripeCustomerId() == null || user.getStripeCustomerId().isBlank())) {
+            userService.setStripeCustomerId(userId, session.getCustomer());
+            user = userRepository.findById(userId).orElse(user);
+        }
+        if (!"MEMBER".equals(user.getMembershipType())) {
+            userService.updateMembership(userId, "MEMBER");
+            return true;
+        }
+        return false;
     }
 
     public Map<String, String> createCustomerPortalSession(Long userId) throws Exception {
@@ -170,6 +211,7 @@ public class StripeService {
                     sub.setStatus(stripeSub.getStatus());
                     sub.setCurrentPeriodStart(Instant.ofEpochSecond(stripeSub.getCurrentPeriodStart()).atZone(ZoneId.systemDefault()).toLocalDateTime());
                     sub.setCurrentPeriodEnd(Instant.ofEpochSecond(stripeSub.getCurrentPeriodEnd()).atZone(ZoneId.systemDefault()).toLocalDateTime());
+                    sub.setCancelAtPeriodEnd(Boolean.TRUE.equals(stripeSub.getCancelAtPeriodEnd()));
                     subscriptionRepository.save(sub);
                     userService.updateMembership(sub.getUser().getId(), sub.getPlanType().name());
                 },
