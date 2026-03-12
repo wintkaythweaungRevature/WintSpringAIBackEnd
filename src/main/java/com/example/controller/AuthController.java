@@ -30,9 +30,17 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
-        AuthResponse response = userService.register(request);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<?> register(@RequestBody(required = false) RegisterRequest request) {
+        if (request == null || request.getEmail() == null || request.getEmail().isBlank()
+                || request.getPassword() == null || request.getPassword().isBlank()) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", "Email and password are required"));
+        }
+        try {
+            AuthResponse response = userService.register(request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("error", e.getMessage()));
+        }
     }
 
     @PostMapping("/login")
