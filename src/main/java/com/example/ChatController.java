@@ -88,11 +88,12 @@ public class ChatController {
         return "Backend is alive and CORS is configured!";
     }
 
-    @GetMapping("/ask-ai")
-    public ResponseEntity<?> askAi(@AuthenticationPrincipal UserDetails userDetails,
-                                   @RequestParam(value = "prompt") String prompt) {
-        ResponseEntity<?> denied = requirePaidSubscription(userDetails);
-        if (denied != null) return denied;
+    @GetMapping(value = "/ask-ai", produces = MediaType.TEXT_PLAIN_VALUE)
+    public ResponseEntity<String> askAi(@AuthenticationPrincipal UserDetails userDetails,
+                                        @RequestParam(value = "prompt") String prompt) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Authentication required");
+        }
         return ResponseEntity.ok(chatModel.call(prompt));
     }
 
