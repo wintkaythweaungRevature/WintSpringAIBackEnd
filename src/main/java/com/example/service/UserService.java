@@ -64,6 +64,9 @@ public class UserService {
         if (user.getPassword() == null || !passwordEncoder.matches(req.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Invalid email or password");
         }
+        if (!user.isActive()) {
+            throw new IllegalArgumentException("Account is deactivated. Please reactivate your account to continue.");
+        }
         ensureUserHasRoleAndSubscription(user);
         user = userRepo.findById(user.getId()).orElse(user);
         String membershipType = user.getMembershipType() != null ? user.getMembershipType() : "FREE";
@@ -124,6 +127,38 @@ public class UserService {
         sub.setStatus("expired");
         subscriptionRepo.save(sub);
         updateMembership(user.getId(), "FREE");
+    }
+
+    /** Deactivates the user account after verifying password. */
+    @Transactional
+    public void deactivateAccount(Long userId, String password) {
+        User user = findById(userId);
+        if (user.getPassword() == null || !passwordEncoder.matches(password, user.getPassword())) {
+            throw new IllegalArgumentException("Invalid password");
+        }
+        user.setActive(false);
+        user.setDeactivatedAt(LocalDateTime.now());
+        userRepo.save(user);
+    }
+
+    /** Reactivates a previously deactivated account after verifying credentials. */
+    @Transactional
+    public AuthResponse reactivateAccount(String email, String password) {
+        User user = userRepo.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
+        if (user.getPassword() == null || !passwordEncoder.matches(password, user.getPassword())) {
+            throw new IllegalArgumentException("Invalid email or password");
+        }
+        if (user.isActive()) {
+            throw new IllegalArgumentException("Account is already active. Please login normally.");
+        }
+        user.setActive(true);
+        user.setDeactivatedAt(null);
+        userRepo.save(user);
+        ensureUserHasRoleAndSubscription(user);
+        user = userRepo.findById(user.getId()).orElse(user);
+        String token = jwtService.generateToken(user.getEmail(), user.getId());
+        return new AuthResponse(token, user.getEmail(), user.getMembershipType() != null ? user.getMembershipType() : "FREE", user.getId());
     }
 
     /** Ensures user has a role and at least one active subscription (for legacy/old members). */

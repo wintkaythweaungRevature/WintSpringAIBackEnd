@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.entity.Subscription;
@@ -33,7 +34,7 @@ public class SubscriptionController {
         this.userService = userService;
     }
 
-    /** Returns subscription status for the current user: active, plan, period end. Use for "Activated", "Monthly ends on", and link to invoices. */
+    /** Returns subscription status for the current user: active, plan, period end, cancelAtPeriodEnd. */
     @GetMapping("/status")
     public ResponseEntity<?> getSubscriptionStatus(@AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails == null) {
@@ -49,12 +50,14 @@ public class SubscriptionController {
             status.put("plan", user.getMembershipType() != null ? user.getMembershipType() : "FREE");
             status.put("subscriptionStatus", null);
             status.put("subscriptionPeriodEnd", null);
+            status.put("cancelAtPeriodEnd", false);
             if (memberSub.isPresent()) {
                 Subscription sub = memberSub.get();
                 status.put("subscriptionStatus", sub.getStatus() != null ? sub.getStatus() : "active");
                 if (sub.getCurrentPeriodEnd() != null) {
                     status.put("subscriptionPeriodEnd", sub.getCurrentPeriodEnd().toLocalDate().toString());
                 }
+                status.put("cancelAtPeriodEnd", sub.isCancelAtPeriodEnd());
             }
             status.put("canManageInvoices", user.getStripeCustomerId() != null && !user.getStripeCustomerId().isBlank());
             return ResponseEntity.ok(status);
@@ -87,7 +90,7 @@ public class SubscriptionController {
         }
     }
 
-    /** Cancel subscription at period end. User keeps access until then; then webhook sets them to FREE. To reactivate, use POST /checkout again (Upgrade / Activate). */
+    /** Cancel subscription at period end. User keeps access until then; then webhook sets them to FREE. */
     @PostMapping("/cancel")
     public ResponseEntity<?> cancelSubscription(@AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails == null) {
@@ -105,7 +108,42 @@ public class SubscriptionController {
         }
     }
 
-    /** Returns a one-time URL to Stripe Customer Portal (invoices, update payment, cancel). Use for "View invoices" / "Manage subscription". */
+    /** Reactivate a subscription that was set to cancel at period end (undo cancellation). */
+    @PostMapping("/reactivate")
+    public ResponseEntity<?> reactivateSubscription(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Authentication required"));
+        }
+        try {
+            User user = userService.findByEmail(userDetails.getUsername());
+            stripeService.reactivateSubscription(user.getId());
+            return ResponseEntity.ok(Map.of("message", "Subscription reactivated. Your membership will continue after the current period."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Reactivate subscription failed", e);
+            return ResponseEntity.badRequest().body(Map.of("error", "Could not reactivate subscription. Try the billing portal or contact support."));
+        }
+    }
+
+    /** Verify a Stripe checkout session and upgrade user if payment completed. */
+    @GetMapping("/verify-session")
+    public ResponseEntity<?> verifySession(@AuthenticationPrincipal UserDetails userDetails,
+                                           @RequestParam("session_id") String sessionId) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Authentication required"));
+        }
+        try {
+            User user = userService.findByEmail(userDetails.getUsername());
+            boolean upgraded = stripeService.verifyCheckoutSession(user.getId(), sessionId);
+            return ResponseEntity.ok(Map.of("upgraded", upgraded));
+        } catch (Exception e) {
+            log.error("Session verification failed", e);
+            return ResponseEntity.ok(Map.of("upgraded", false));
+        }
+    }
+
+    /** Returns a one-time URL to Stripe Customer Portal (invoices, update payment, cancel). */
     @GetMapping("/portal")
     public ResponseEntity<?> createPortalSession(@AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails == null) {

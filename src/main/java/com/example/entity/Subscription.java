@@ -40,6 +40,9 @@ public class Subscription {
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(name = "cancel_at_period_end")
+    private boolean cancelAtPeriodEnd = false;
+
     public enum PlanType {
         FREE, MEMBER
     }

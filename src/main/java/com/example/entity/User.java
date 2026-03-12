@@ -37,6 +37,12 @@ public class User {
 
     private LocalDateTime createdAt;
 
+    @Column(name = "is_active")
+    private boolean active = true;
+
+    @Column(name = "deactivated_at")
+    private LocalDateTime deactivatedAt;
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Subscription> subscriptions = new ArrayList<>();
 
