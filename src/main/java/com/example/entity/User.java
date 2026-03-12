@@ -35,6 +35,9 @@ public class User {
     @Column(name = "stripe_customer_id")
     private String stripeCustomerId;
 
+    @Column(name = "email_verified")
+    private boolean emailVerified = false;
+
     private LocalDateTime createdAt;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

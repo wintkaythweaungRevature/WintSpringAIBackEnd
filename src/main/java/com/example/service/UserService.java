@@ -8,6 +8,7 @@ import com.example.entity.Subscription.PlanType;
 import com.example.entity.User;
 import com.example.repository.SubscriptionRepository;
 import com.example.repository.UserRepository;
+import com.example.service.EmailVerificationService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,13 +20,16 @@ public class UserService {
     private final SubscriptionRepository subscriptionRepo;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final EmailVerificationService emailVerificationService;
 
     public UserService(UserRepository userRepo, SubscriptionRepository subscriptionRepo,
-                       PasswordEncoder passwordEncoder, JwtService jwtService) {
+                       PasswordEncoder passwordEncoder, JwtService jwtService,
+                       EmailVerificationService emailVerificationService) {
         this.userRepo = userRepo;
         this.subscriptionRepo = subscriptionRepo;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @Transactional
@@ -50,8 +54,10 @@ public class UserService {
         sub.setCurrentPeriodEnd(java.time.LocalDateTime.now().plusYears(100));
         subscriptionRepo.save(sub);
 
+        emailVerificationService.sendVerificationEmail(user);
+
         String token = jwtService.generateToken(user.getEmail(), user.getId());
-        return new AuthResponse(token, user.getEmail(), user.getMembershipType(), user.getId());
+        return new AuthResponse(token, user.getEmail(), user.getMembershipType(), user.getId(), user.isEmailVerified());
     }
 
     public AuthResponse login(AuthRequest req) {
@@ -63,7 +69,7 @@ public class UserService {
         ensureUserHasActiveSubscription(user);
         String membershipType = user.getMembershipType() != null ? user.getMembershipType() : "FREE";
         String token = jwtService.generateToken(user.getEmail(), user.getId());
-        return new AuthResponse(token, user.getEmail(), membershipType, user.getId());
+        return new AuthResponse(token, user.getEmail(), membershipType, user.getId(), user.isEmailVerified());
     }
 
     public User findById(Long id) {

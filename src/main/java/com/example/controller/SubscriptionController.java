@@ -31,7 +31,7 @@ public class SubscriptionController {
                                           @RequestBody Map<String, String> body) {
         try {
             User user = userService.findByEmail(userDetails.getUsername());
-            String plan = body.getOrDefault("plan", "BASIC");
+            String plan = body.getOrDefault("plan", "MEMBER");
             Map<String, String> session = stripeService.createCheckoutSession(user.getId(), plan);
             return ResponseEntity.ok(session);
         } catch (Exception e) {

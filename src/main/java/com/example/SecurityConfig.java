@@ -44,7 +44,8 @@ public class SecurityConfig {
                 session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/verify-email").permitAll()
+                .requestMatchers("/verify-email.html").permitAll()
                 .requestMatchers("/api/webhook/**").permitAll()
                 .requestMatchers("/api/ai/test").permitAll()
                 .requestMatchers("/error").permitAll()

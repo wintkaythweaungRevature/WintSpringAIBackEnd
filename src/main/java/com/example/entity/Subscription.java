@@ -41,6 +41,6 @@ public class Subscription {
     private LocalDateTime createdAt = LocalDateTime.now();
 
     public enum PlanType {
-        FREE, BASIC, PRO, ENTERPRISE
+        FREE, MEMBER  // MEMBER = $5.99/month for all premium features
     }
 }

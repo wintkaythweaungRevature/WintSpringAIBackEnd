@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Email - WintAI</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #eee;
+        }
+        .card {
+            background: rgba(255,255,255,0.08);
+            padding: 2rem;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 420px;
+        }
+        h1 { margin-top: 0; }
+        .success { color: #4ade80; }
+        .error { color: #f87171; }
+        .loading { color: #94a3b8; }
+        a { color: #60a5fa; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div id="content">
+            <p class="loading">Verifying your email...</p>
+        </div>
+    </div>
+    <script>
+        (function() {
+            const params = new URLSearchParams(location.search);
+            const token = params.get('token');
+            const el = document.getElementById('content');
+
+            if (!token) {
+                el.innerHTML = '<p class="error">Invalid link. No verification token found.</p>';
+                return;
+            }
+
+            const base = location.origin;
+            fetch(base + '/api/auth/verify-email?token=' + encodeURIComponent(token))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.message) {
+                        el.innerHTML = '<h1 class="success">✓ Email verified!</h1><p>' + data.message + '</p><p><a href="' + (window.APP_LOGIN_URL || 'https://wintaibot.com') + '">Go to app</a></p>';
+                    } else {
+                        el.innerHTML = '<p class="error">' + (data.error || 'Verification failed.') + '</p>';
+                    }
+                })
+                .catch(() => {
+                    el.innerHTML = '<p class="error">Could not verify. The link may have expired.</p>';
+                });
+        })();
+    </script>
+</body>
+</html>

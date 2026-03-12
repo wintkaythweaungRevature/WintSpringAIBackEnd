@@ -10,4 +10,5 @@ public class AuthResponse {
     private String email;
     private String membershipType;
     private Long userId;
+    private boolean emailVerified;
 }

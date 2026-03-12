@@ -23,11 +23,8 @@ public class StripeService {
     @Value("${stripe.webhook.secret}")
     private String webhookSecret;
 
-    @Value("${stripe.price.basic:price_xxx}")
-    private String basicPriceId;
-
-    @Value("${stripe.price.pro:price_xxx}")
-    private String proPriceId;
+    @Value("${stripe.price.member:price_xxx}")
+    private String memberPriceId;
 
     private final UserRepository userRepository;
     private final SubscriptionRepository subscriptionRepository;
@@ -49,11 +46,7 @@ public class StripeService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        String priceId = switch (planType.toUpperCase()) {
-            case "BASIC" -> basicPriceId;
-            case "PRO" -> proPriceId;
-            default -> throw new IllegalArgumentException("Invalid plan: " + planType);
-        };
+        String priceId = memberPriceId;
 
         var paramsBuilder = com.stripe.param.checkout.SessionCreateParams.builder()
                 .setMode(com.stripe.param.checkout.SessionCreateParams.Mode.SUBSCRIPTION)
@@ -65,10 +58,10 @@ public class StripeService {
                         .build())
                 .setSubscriptionData(com.stripe.param.checkout.SessionCreateParams.SubscriptionData.builder()
                         .putMetadata("userId", userId.toString())
-                        .putMetadata("planType", planType)
+                        .putMetadata("planType", "MEMBER")
                         .build())
                 .putMetadata("userId", userId.toString())
-                .putMetadata("planType", planType);
+                .putMetadata("planType", "MEMBER");
 
         if (user.getStripeCustomerId() != null) {
             paramsBuilder.setCustomer(user.getStripeCustomerId());
@@ -186,8 +179,8 @@ public class StripeService {
         sub.setStatus(stripeSub.getStatus());
         sub.setCurrentPeriodStart(Instant.ofEpochSecond(stripeSub.getCurrentPeriodStart()).atZone(ZoneId.systemDefault()).toLocalDateTime());
         sub.setCurrentPeriodEnd(Instant.ofEpochSecond(stripeSub.getCurrentPeriodEnd()).atZone(ZoneId.systemDefault()).toLocalDateTime());
-        String planType = stripeSub.getMetadata() != null ? stripeSub.getMetadata().getOrDefault("planType", "BASIC") : "BASIC";
-        sub.setPlanType(PlanType.valueOf(planType));
+        String planType = stripeSub.getMetadata() != null ? stripeSub.getMetadata().getOrDefault("planType", "MEMBER") : "MEMBER";
+        sub.setPlanType("MEMBER".equalsIgnoreCase(planType) ? PlanType.MEMBER : PlanType.MEMBER);
         subscriptionRepository.save(sub);
         userService.updateMembership(user.getId(), sub.getPlanType().name());
     }
