@@ -3,8 +3,12 @@ package com.example.controller;
 import com.example.dto.AuthRequest;
 import com.example.dto.AuthResponse;
 import com.example.dto.RegisterRequest;
+import com.example.entity.Subscription;
 import com.example.entity.User;
 import com.example.service.UserService;
+
+import java.time.format.DateTimeFormatter;
+import java.util.Optional;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -51,13 +55,29 @@ public class AuthController {
         }
         try {
             User user = userService.findByEmail(userDetails.getUsername());
+            userService.hasActivePaidAccess(user);
+            user = userService.findById(user.getId());
+            String membershipType = user.getMembershipType() != null ? user.getMembershipType() : "FREE";
+            String subscriptionStatus = null;
+            String subscriptionPeriodEnd = null;
+            Optional<Subscription> memberSub = userService.getActiveMemberSubscription(user);
+            if (memberSub.isPresent()) {
+                Subscription sub = memberSub.get();
+                subscriptionStatus = sub.getStatus() != null ? sub.getStatus() : "active";
+                if (sub.getCurrentPeriodEnd() != null) {
+                    subscriptionPeriodEnd = sub.getCurrentPeriodEnd().format(DateTimeFormatter.ISO_LOCAL_DATE);
+                }
+            }
+            String role = (user.getRole() != null && !user.getRole().isBlank()) ? user.getRole() : "ROLE_USER";
             return ResponseEntity.ok(new AuthMeResponse(
                     user.getId(),
                     user.getEmail(),
                     user.getFirstName(),
                     user.getLastName(),
-                    user.getMembershipType() != null ? user.getMembershipType() : "FREE",
-                    user.getRole()
+                    membershipType,
+                    role,
+                    subscriptionStatus,
+                    subscriptionPeriodEnd
             ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(401).build();
@@ -66,5 +86,8 @@ public class AuthController {
         }
     }
 
-    public record AuthMeResponse(Long id, String email, String firstName, String lastName, String membershipType, String role) {}
+    public record AuthMeResponse(
+            Long id, String email, String firstName, String lastName, String membershipType, String role,
+            String subscriptionStatus, String subscriptionPeriodEnd
+    ) {}
 }

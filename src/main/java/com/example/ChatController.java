@@ -16,7 +16,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;      // Added
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.multipart.MultipartFile;
+
+import com.example.entity.User;
+import com.example.service.UserService;
 
 import java.util.Collections;
 import java.util.Map;
@@ -50,14 +55,32 @@ public class ChatController {
     private final ImageModel imageModel;
     private final OpenAiAudioTranscriptionModel transcriptionModel;
     private final EmailGeneratorService emailGeneratorService;
+    private final UserService userService;
 
-    public ChatController(OpenAiChatModel chatModel, ImageModel imageModel ,
-        OpenAiAudioTranscriptionModel transcriptionModel, EmailGeneratorService emailGeneratorService) {
+    public ChatController(OpenAiChatModel chatModel, ImageModel imageModel,
+        OpenAiAudioTranscriptionModel transcriptionModel, EmailGeneratorService emailGeneratorService,
+        UserService userService) {
         this.chatModel = chatModel;
         this.imageModel = imageModel;
         this.transcriptionModel = transcriptionModel;
         this.emailGeneratorService = emailGeneratorService;
-    
+        this.userService = userService;
+    }
+
+    private ResponseEntity<?> requirePaidSubscription(UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentication required"));
+        }
+        try {
+            User user = userService.findByEmail(userDetails.getUsername());
+            if (!userService.hasActivePaidAccess(user)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "Active subscription required. Your plan may have expired or been canceled."));
+            }
+            return null;
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
     }
 
     @GetMapping("/test")
@@ -66,23 +89,32 @@ public class ChatController {
     }
 
     @GetMapping("/ask-ai")
-    public String askAi(@RequestParam(value = "prompt") String prompt) {
-        return chatModel.call(prompt);
+    public ResponseEntity<?> askAi(@AuthenticationPrincipal UserDetails userDetails,
+                                   @RequestParam(value = "prompt") String prompt) {
+        ResponseEntity<?> denied = requirePaidSubscription(userDetails);
+        if (denied != null) return denied;
+        return ResponseEntity.ok(chatModel.call(prompt));
     }
 
     @GetMapping("/generate-image")
-    public Map<String, String> generateImage(@RequestParam(value = "prompt") String prompt) {
+    public ResponseEntity<?> generateImage(@AuthenticationPrincipal UserDetails userDetails,
+                                            @RequestParam(value = "prompt") String prompt) {
+        ResponseEntity<?> denied = requirePaidSubscription(userDetails);
+        if (denied != null) return denied;
         ImageResponse response = imageModel.call(new ImagePrompt(prompt));
         String imageUrl = response.getResult().getOutput().getUrl();
-        return Collections.singletonMap("url", imageUrl);
+        return ResponseEntity.ok(Collections.singletonMap("url", imageUrl));
     }
 
     // ✅ NEW endpoint - AI analyzes PDF and returns structured JSON
     @PostMapping("/analyze-pdf")
-    public ResponseEntity<String> analyzePdf(
+    public ResponseEntity<?> analyzePdf(
+            @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "prompt", defaultValue = "Analyze this document and extract all important information.") String userPrompt
     ) throws IOException {
+        ResponseEntity<?> denied = requirePaidSubscription(userDetails);
+        if (denied != null) return denied;
 
         // Step 1: Extract text from PDF using PDFBox
         String pdfText = readPdf(file);
@@ -124,10 +156,13 @@ public class ChatController {
         }
     }
     // Audio transcription endpoint
-          @PostMapping("/transcribe")
-           public ResponseEntity<String> transcribeAudio
-        (@RequestParam("file") MultipartFile file) throws IOException {
-           File tempfile = File.createTempFile("audio", "wav");
+    @PostMapping("/transcribe")
+    public ResponseEntity<?> transcribeAudio(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam("file") MultipartFile file) throws IOException {
+        ResponseEntity<?> denied = requirePaidSubscription(userDetails);
+        if (denied != null) return denied;
+        File tempfile = File.createTempFile("audio", "wav");
               file.transferTo(tempfile);
               OpenAiAudioTranscriptionOptions transcriptionOptions = OpenAiAudioTranscriptionOptions.builder()
               .withResponseFormat(OpenAiAudioApi.TranscriptResponseFormat.TEXT)
@@ -142,10 +177,13 @@ public class ChatController {
               return new ResponseEntity<>(response.getResult().getOutput(), HttpStatus.OK);
         }
 
-        @PostMapping("/reply")
-    public String generateReply(@RequestBody Map<String, String> payload) {
+    @PostMapping("/reply")
+    public ResponseEntity<?> generateReply(@AuthenticationPrincipal UserDetails userDetails,
+                                           @RequestBody Map<String, String> payload) {
+        ResponseEntity<?> denied = requirePaidSubscription(userDetails);
+        if (denied != null) return denied;
         String emailContent = payload.get("emailContent");
         String tone = payload.get("tone");
-        return emailGeneratorService.generateEmailReply(emailContent, tone);
+        return ResponseEntity.ok(emailGeneratorService.generateEmailReply(emailContent, tone));
     }
 }

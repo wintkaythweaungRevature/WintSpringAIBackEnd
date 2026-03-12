@@ -83,6 +83,22 @@ public class StripeService {
         return result;
     }
 
+    /** Cancels the user's subscription at period end. They keep access until then; webhook will set FREE when it ends. */
+    public void cancelSubscriptionAtPeriodEnd(Long userId) throws Exception {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        var memberSub = subscriptionRepository.findTopByUserAndStatusOrderByCurrentPeriodEndDesc(user, "active")
+                .filter(s -> s.getPlanType() == PlanType.MEMBER && s.getStripeSubscriptionId() != null);
+        if (memberSub.isEmpty()) {
+            throw new IllegalArgumentException("No active subscription to cancel");
+        }
+        String stripeSubId = memberSub.get().getStripeSubscriptionId();
+        var params = com.stripe.param.SubscriptionUpdateParams.builder()
+                .setCancelAtPeriodEnd(true)
+                .build();
+        com.stripe.model.Subscription.retrieve(stripeSubId).update(params);
+    }
+
     public Map<String, String> createCustomerPortalSession(Long userId) throws Exception {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));

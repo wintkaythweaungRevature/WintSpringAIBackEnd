@@ -8,6 +8,10 @@ import com.example.entity.Subscription.PlanType;
 import com.example.entity.User;
 import com.example.repository.SubscriptionRepository;
 import com.example.repository.UserRepository;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -57,10 +61,11 @@ public class UserService {
     public AuthResponse login(AuthRequest req) {
         User user = userRepo.findByEmail(req.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid email or password"));
-        if (!passwordEncoder.matches(req.getPassword(), user.getPassword())) {
+        if (user.getPassword() == null || !passwordEncoder.matches(req.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Invalid email or password");
         }
-        ensureUserHasActiveSubscription(user);
+        ensureUserHasRoleAndSubscription(user);
+        user = userRepo.findById(user.getId()).orElse(user);
         String membershipType = user.getMembershipType() != null ? user.getMembershipType() : "FREE";
         String token = jwtService.generateToken(user.getEmail(), user.getId());
         return new AuthResponse(token, user.getEmail(), membershipType, user.getId());
@@ -86,8 +91,56 @@ public class UserService {
         userRepo.save(user);
     }
 
-    /** Ensures user has an active FREE subscription (for legacy users created before subscriptions). */
-    private void ensureUserHasActiveSubscription(User user) {
+    /** Returns the user's active paid subscription (MEMBER), if any. */
+    public Optional<Subscription> getActiveMemberSubscription(User user) {
+        return subscriptionRepo.findTopByUserAndStatusOrderByCurrentPeriodEndDesc(user, "active")
+                .filter(sub -> sub.getPlanType() == PlanType.MEMBER);
+    }
+
+    /**
+     * True only if the user has an active paid (MEMBER) subscription and the current period has not ended.
+     * If the period end date has passed, this syncs the user to FREE and returns false so member-only features are blocked.
+     */
+    public boolean hasActivePaidAccess(User user) {
+        Optional<Subscription> opt = getActiveMemberSubscription(user);
+        if (opt.isEmpty()) {
+            return false;
+        }
+        Subscription sub = opt.get();
+        LocalDateTime periodEnd = sub.getCurrentPeriodEnd();
+        if (periodEnd == null) {
+            return true;
+        }
+        if (periodEnd.isBefore(LocalDateTime.now())) {
+            syncExpiredSubscription(user, sub);
+            return false;
+        }
+        return true;
+    }
+
+    /** Marks subscription as expired and sets user membership to FREE when period end has passed. */
+    @Transactional
+    public void syncExpiredSubscription(User user, Subscription sub) {
+        sub.setStatus("expired");
+        subscriptionRepo.save(sub);
+        updateMembership(user.getId(), "FREE");
+    }
+
+    /** Ensures user has a role and at least one active subscription (for legacy/old members). */
+    @Transactional
+    public void ensureUserHasRoleAndSubscription(User user) {
+        boolean changed = false;
+        if (user.getRole() == null || user.getRole().isBlank()) {
+            user.setRole("ROLE_USER");
+            changed = true;
+        }
+        if (user.getMembershipType() == null || user.getMembershipType().isBlank()) {
+            user.setMembershipType("FREE");
+            changed = true;
+        }
+        if (changed) {
+            userRepo.save(user);
+        }
         boolean hasActive = subscriptionRepo.findTopByUserAndStatusOrderByCurrentPeriodEndDesc(user, "active").isPresent();
         if (!hasActive) {
             Subscription sub = new Subscription();
@@ -97,7 +150,7 @@ public class UserService {
             sub.setCurrentPeriodStart(java.time.LocalDateTime.now());
             sub.setCurrentPeriodEnd(java.time.LocalDateTime.now().plusYears(100));
             subscriptionRepo.save(sub);
-            if (user.getMembershipType() == null) {
+            if (user.getMembershipType() == null || user.getMembershipType().isBlank()) {
                 user.setMembershipType("FREE");
                 userRepo.save(user);
             }

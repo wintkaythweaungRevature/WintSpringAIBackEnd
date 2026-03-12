@@ -14,7 +14,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.entity.Subscription;
+
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/subscription")
@@ -27,6 +31,36 @@ public class SubscriptionController {
     public SubscriptionController(StripeService stripeService, UserService userService) {
         this.stripeService = stripeService;
         this.userService = userService;
+    }
+
+    /** Returns subscription status for the current user: active, plan, period end. Use for "Activated", "Monthly ends on", and link to invoices. */
+    @GetMapping("/status")
+    public ResponseEntity<?> getSubscriptionStatus(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Authentication required"));
+        }
+        try {
+            User user = userService.findByEmail(userDetails.getUsername());
+            userService.hasActivePaidAccess(user);
+            user = userService.findById(user.getId());
+            Optional<Subscription> memberSub = userService.getActiveMemberSubscription(user);
+            Map<String, Object> status = new HashMap<>();
+            status.put("active", userService.hasActivePaidAccess(user));
+            status.put("plan", user.getMembershipType() != null ? user.getMembershipType() : "FREE");
+            status.put("subscriptionStatus", null);
+            status.put("subscriptionPeriodEnd", null);
+            if (memberSub.isPresent()) {
+                Subscription sub = memberSub.get();
+                status.put("subscriptionStatus", sub.getStatus() != null ? sub.getStatus() : "active");
+                if (sub.getCurrentPeriodEnd() != null) {
+                    status.put("subscriptionPeriodEnd", sub.getCurrentPeriodEnd().toLocalDate().toString());
+                }
+            }
+            status.put("canManageInvoices", user.getStripeCustomerId() != null && !user.getStripeCustomerId().isBlank());
+            return ResponseEntity.ok(status);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(401).build();
+        }
     }
 
     @PostMapping("/checkout")
@@ -53,14 +87,39 @@ public class SubscriptionController {
         }
     }
 
+    /** Cancel subscription at period end. User keeps access until then; then webhook sets them to FREE. To reactivate, use POST /checkout again (Upgrade / Activate). */
+    @PostMapping("/cancel")
+    public ResponseEntity<?> cancelSubscription(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Authentication required"));
+        }
+        try {
+            User user = userService.findByEmail(userDetails.getUsername());
+            stripeService.cancelSubscriptionAtPeriodEnd(user.getId());
+            return ResponseEntity.ok(Map.of("message", "Subscription will cancel at the end of the current period. You can use member features until then."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Cancel subscription failed", e);
+            return ResponseEntity.badRequest().body(Map.of("error", "Could not cancel subscription. Try the billing portal or contact support."));
+        }
+    }
+
+    /** Returns a one-time URL to Stripe Customer Portal (invoices, update payment, cancel). Use for "View invoices" / "Manage subscription". */
     @GetMapping("/portal")
     public ResponseEntity<?> createPortalSession(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Authentication required"));
+        }
         try {
             User user = userService.findByEmail(userDetails.getUsername());
             Map<String, String> session = stripeService.createCustomerPortalSession(user.getId());
             return ResponseEntity.ok(session);
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Portal session failed", e);
+            return ResponseEntity.badRequest().body(Map.of("error", "Could not open billing portal."));
         }
     }
 }
