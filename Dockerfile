@@ -10,10 +10,8 @@ RUN mvn clean package -DskipTests
 FROM eclipse-temurin:17-jdk-alpine
 WORKDIR /app
 
-# GitHub Actions သို့မဟုတ် AWS ကနေ ပို့လိုက်တဲ့ Argument ကို လက်ခံဖို့
-ARG SPRING_AI_OPENAI_API_KEY
-# လက်ခံရရှိတဲ့ Argument ကို Environment Variable အဖြစ် သတ်မှတ်ပေးခြင်း
-ENV SPRING_AI_OPENAI_API_KEY=${SPRING_AI_OPENAI_API_KEY}
+# All secrets (SPRING_AI_OPENAI_API_KEY, JWT_SECRET, STRIPE_SECRET_KEY, etc.)
+# must be injected at container runtime via environment variables, not baked into the image.
 
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
