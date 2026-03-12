@@ -148,11 +148,4 @@ public class ChatController {
         String tone = payload.get("tone");
         return emailGeneratorService.generateEmailReply(emailContent, tone);
     }
-    @GetMapping(value = "/sitemap.xml", produces = MediaType.APPLICATION_XML_VALUE)
-@ResponseBody
-public org.springframework.core.io.Resource getSitemap() {
-    return new org.springframework.core.io.ClassPathResource("static/sitemap.xml");
-}
-     
-     
 }
