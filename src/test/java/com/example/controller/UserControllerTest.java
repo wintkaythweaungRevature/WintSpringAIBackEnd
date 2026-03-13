@@ -24,6 +24,7 @@ class UserControllerTest {
     @Autowired MockMvc mockMvc;
 
     @MockBean UserService userService;
+    @MockBean com.example.service.JwtService jwtService;
 
     @Test
     @WithMockUser(username = "user@example.com")

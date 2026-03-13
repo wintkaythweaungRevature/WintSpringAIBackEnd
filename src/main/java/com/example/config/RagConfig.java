@@ -1,4 +1,4 @@
-package com.example.config;
+package com.example.Config;
 
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.vectorstore.PgVectorStore;

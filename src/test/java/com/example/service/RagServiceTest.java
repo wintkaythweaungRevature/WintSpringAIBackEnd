@@ -104,7 +104,7 @@ class RagServiceTest {
         String answer = ragService.query(userId, question);
 
         assertThat(answer).isEqualTo("It discusses AI concepts.");
-        verify(chatModel).call(argThat(prompt ->
+        verify(chatModel).call(argThat((String prompt) ->
                 prompt.contains("AI concepts") && prompt.contains(question)
         ));
     }
@@ -140,7 +140,7 @@ class RagServiceTest {
 
         ragService.query(1L, "question");
 
-        verify(chatModel).call(argThat(prompt ->
+        verify(chatModel).call(argThat((String prompt) ->
                 prompt.contains("First chunk content.") && prompt.contains("Second chunk content.")
         ));
     }

@@ -32,6 +32,7 @@ class AdminControllerTest {
 
     @MockBean UserService userService;
     @MockBean StripeService stripeService;
+    @MockBean com.example.service.JwtService jwtService;
 
     // ─── GET /api/admin/users ─────────────────────────────────────────────────
 

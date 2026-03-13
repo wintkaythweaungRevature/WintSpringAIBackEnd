@@ -8,6 +8,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.example.Controller.DatabaseHealthController;
+
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -26,6 +28,7 @@ class DatabaseHealthControllerTest {
     @Autowired MockMvc mockMvc;
 
     @MockBean DataSource dataSource;
+    @MockBean com.example.service.JwtService jwtService;
 
     @Test
     void checkDb_returnsUpWhenConnectionIsValid() throws Exception {

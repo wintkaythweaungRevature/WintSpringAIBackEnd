@@ -29,6 +29,7 @@ class SubscriptionControllerTest {
 
     @MockBean StripeService stripeService;
     @MockBean UserService userService;
+    @MockBean com.example.service.JwtService jwtService;
 
     // ─── Unauthenticated access (null principal → controller returns 401) ────
 

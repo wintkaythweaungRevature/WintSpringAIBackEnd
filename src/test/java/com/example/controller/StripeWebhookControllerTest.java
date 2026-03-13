@@ -23,6 +23,7 @@ class StripeWebhookControllerTest {
     @Autowired MockMvc mockMvc;
 
     @MockBean StripeService stripeService;
+    @MockBean com.example.service.JwtService jwtService;
 
     @Test
     void handleWebhook_validPayload_returns200OK() throws Exception {

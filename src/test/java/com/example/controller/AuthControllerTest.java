@@ -30,6 +30,7 @@ class AuthControllerTest {
     @Autowired ObjectMapper objectMapper;
 
     @MockBean UserService userService;
+    @MockBean com.example.service.JwtService jwtService;
 
     // ─── POST /api/auth/register ─────────────────────────────────────────────
 

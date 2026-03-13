@@ -9,7 +9,6 @@ import org.springframework.ai.image.ImageModel;
 import org.springframework.ai.image.ImageResponse;
 import org.springframework.ai.openai.OpenAiAudioTranscriptionModel;
 import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.ai.openai.audio.transcription.AudioTranscriptionResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
@@ -42,6 +41,7 @@ class ChatControllerTest {
     @MockBean OpenAiAudioTranscriptionModel transcriptionModel;
     @MockBean EmailGeneratorService emailGeneratorService;
     @MockBean UserService userService;
+    @MockBean com.example.service.JwtService jwtService;
 
     // ─── GET /api/ai/test ─────────────────────────────────────────────────────
 
