@@ -78,6 +78,22 @@ public class AdminController {
         }
     }
 
+    /** Manually set a user's membership type (admin only). */
+    @PostMapping("/users/{userId}/membership")
+    public ResponseEntity<?> setMembership(@PathVariable Long userId,
+                                           @RequestBody Map<String, String> body,
+                                           @AuthenticationPrincipal UserDetails userDetails) {
+        if (!isAdmin(userDetails)) {
+            return ResponseEntity.status(403).body(Map.of("error", "Admin access required"));
+        }
+        String membershipType = body.get("membershipType");
+        if (membershipType == null || (!membershipType.equals("MEMBER") && !membershipType.equals("FREE"))) {
+            return ResponseEntity.badRequest().body(Map.of("error", "membershipType must be MEMBER or FREE"));
+        }
+        userService.updateMembership(userId, membershipType);
+        return ResponseEntity.ok(Map.of("message", "Membership updated", "userId", userId, "membershipType", membershipType));
+    }
+
     /**
      * Deactivate a user account (admin only).
      * Cancels any active Stripe subscription and sets membership to FREE.
