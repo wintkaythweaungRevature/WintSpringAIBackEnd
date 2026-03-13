@@ -47,6 +47,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/reactivate").permitAll()
                 .requestMatchers("/api/webhook/**").permitAll()
                 .requestMatchers("/api/ai/test").permitAll()
+                .requestMatchers("/api/health/**").permitAll()
                 .requestMatchers("/sitemap.xml").permitAll()
                 .requestMatchers("/error").permitAll()
                 .requestMatchers("/api/ai/**").authenticated()
