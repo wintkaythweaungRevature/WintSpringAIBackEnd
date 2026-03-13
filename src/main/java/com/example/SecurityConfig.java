@@ -49,6 +49,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/ai/test").permitAll()
                 .requestMatchers("/sitemap.xml").permitAll()
                 .requestMatchers("/error").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/ai/**").authenticated()
                 .requestMatchers("/api/audio/**").authenticated()
                 .anyRequest().authenticated()

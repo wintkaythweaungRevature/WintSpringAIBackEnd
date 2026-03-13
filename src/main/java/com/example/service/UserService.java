@@ -161,6 +161,29 @@ public class UserService {
         return new AuthResponse(token, user.getEmail(), user.getMembershipType() != null ? user.getMembershipType() : "FREE", user.getId());
     }
 
+    /** Admin: list all users with basic info. */
+    public java.util.List<User> getAllUsers() {
+        return userRepo.findAll();
+    }
+
+    /** Admin: activate a user account by id. */
+    @Transactional
+    public void adminActivateUser(Long userId) {
+        User user = findById(userId);
+        user.setActive(true);
+        user.setDeactivatedAt(null);
+        userRepo.save(user);
+    }
+
+    /** Admin: deactivate a user account by id. */
+    @Transactional
+    public void adminDeactivateUser(Long userId) {
+        User user = findById(userId);
+        user.setActive(false);
+        user.setDeactivatedAt(java.time.LocalDateTime.now());
+        userRepo.save(user);
+    }
+
     /** Ensures user has a role and at least one active subscription (for legacy/old members). */
     @Transactional
     public void ensureUserHasRoleAndSubscription(User user) {
