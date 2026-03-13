@@ -1,4 +1,4 @@
-package com.example.controller;
+package com.example.Controller;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -174,8 +174,9 @@ public class SubscriptionController {
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         } catch (Exception e) {
-            log.error("Portal session failed", e);
-            return ResponseEntity.badRequest().body(Map.of("error", "Could not open billing portal."));
+            log.error("Portal session failed: {}", e.getMessage());
+            String msg = e.getMessage() != null ? e.getMessage() : "Could not open billing portal.";
+            return ResponseEntity.badRequest().body(Map.of("error", msg));
         }
     }
 }

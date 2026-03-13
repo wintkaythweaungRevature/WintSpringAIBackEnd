@@ -1,0 +1,38 @@
+name: Backend CI
+
+on:
+  push:
+    branches: ["main", "claude/**"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    name: Spring Boot Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: "17"
+          distribution: "temurin"
+          cache: "maven"
+
+      - name: Run tests with H2 (test profile)
+        run: mvn test -Dspring.profiles.active=test --no-transfer-progress
+        env:
+          # Fake keys so Spring AI / Stripe beans initialize without real credentials
+          SPRING_AI_OPENAI_API_KEY: sk-test-fake
+          STRIPE_SECRET_KEY: sk_test_fake
+
+      - name: Upload Surefire test reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-surefire-reports
+          path: target/surefire-reports/
+          retention-days: 7

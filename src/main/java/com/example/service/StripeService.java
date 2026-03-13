@@ -87,19 +87,54 @@ public class StripeService {
     public void cancelSubscriptionAtPeriodEnd(Long userId) throws Exception {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        // First try local DB record
         var memberSub = subscriptionRepository.findTopByUserAndStatusOrderByCurrentPeriodEndDesc(user, "active")
                 .filter(s -> s.getPlanType() == PlanType.MEMBER && s.getStripeSubscriptionId() != null);
-        if (memberSub.isEmpty()) {
-            throw new IllegalArgumentException("No active subscription to cancel");
+
+        if (memberSub.isPresent()) {
+            Subscription sub = memberSub.get();
+            var params = com.stripe.param.SubscriptionUpdateParams.builder()
+                    .setCancelAtPeriodEnd(true)
+                    .build();
+            com.stripe.model.Subscription.retrieve(sub.getStripeSubscriptionId()).update(params);
+            sub.setCancelAtPeriodEnd(true);
+            subscriptionRepository.save(sub);
+            return;
         }
-        Subscription sub = memberSub.get();
-        String stripeSubId = sub.getStripeSubscriptionId();
-        var params = com.stripe.param.SubscriptionUpdateParams.builder()
-                .setCancelAtPeriodEnd(true)
-                .build();
-        com.stripe.model.Subscription.retrieve(stripeSubId).update(params);
-        sub.setCancelAtPeriodEnd(true);
-        subscriptionRepository.save(sub);
+
+        // No local record - try querying Stripe directly via customer ID
+        if (user.getStripeCustomerId() != null && !user.getStripeCustomerId().isBlank()) {
+            var listParams = com.stripe.param.SubscriptionListParams.builder()
+                    .setCustomer(user.getStripeCustomerId())
+                    .setStatus(com.stripe.param.SubscriptionListParams.Status.ACTIVE)
+                    .setLimit(1L)
+                    .build();
+            var stripeSubs = com.stripe.model.Subscription.list(listParams);
+            if (!stripeSubs.getData().isEmpty()) {
+                var stripeSub = stripeSubs.getData().get(0);
+                var params = com.stripe.param.SubscriptionUpdateParams.builder()
+                        .setCancelAtPeriodEnd(true)
+                        .build();
+                stripeSub.update(params);
+                // Sync to local DB
+                saveSubscription(user, stripeSub);
+                // Update the saved record's cancelAtPeriodEnd flag
+                subscriptionRepository.findByStripeSubscriptionId(stripeSub.getId()).ifPresent(sub -> {
+                    sub.setCancelAtPeriodEnd(true);
+                    subscriptionRepository.save(sub);
+                });
+                return;
+            }
+        }
+
+        // Membership was manually set (no Stripe subscription) - just remove access immediately
+        if ("MEMBER".equals(user.getMembershipType())) {
+            userService.updateMembership(userId, "FREE");
+            return;
+        }
+
+        throw new IllegalArgumentException("No active subscription to cancel");
     }
 
     /** Reactivates a subscription that was set to cancel at period end (undo cancellation). */
@@ -144,19 +179,58 @@ public class StripeService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        if (user.getStripeCustomerId() == null) {
-            throw new IllegalArgumentException("No subscription found");
+        if (user.getStripeCustomerId() == null || user.getStripeCustomerId().isBlank()) {
+            throw new IllegalArgumentException("No billing account found. Please subscribe first.");
         }
 
-        var params = com.stripe.param.billingportal.SessionCreateParams.builder()
+        try {
+            var params = com.stripe.param.billingportal.SessionCreateParams.builder()
+                    .setCustomer(user.getStripeCustomerId())
+                    .setReturnUrl("https://wintaibot.com/subscription")
+                    .build();
+
+            var session = com.stripe.model.billingportal.Session.create(params);
+
+            Map<String, String> result = new HashMap<>();
+            result.put("url", session.getUrl());
+            return result;
+        } catch (com.stripe.exception.InvalidRequestException e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "";
+            if (msg.contains("configuration") || msg.contains("portal") || msg.contains("No default")) {
+                throw new IllegalArgumentException("Billing portal not configured. Please enable it at https://dashboard.stripe.com/test/settings/billing/portal");
+            }
+            if (msg.contains("No such customer")) {
+                throw new IllegalArgumentException("Billing account not found. Please re-subscribe.");
+            }
+            throw e;
+        }
+    }
+
+    /** Returns the last 10 invoices for the user from Stripe. */
+    public java.util.List<Map<String, Object>> getInvoices(Long userId) throws Exception {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (user.getStripeCustomerId() == null || user.getStripeCustomerId().isBlank()) {
+            return java.util.Collections.emptyList();
+        }
+        var params = com.stripe.param.InvoiceListParams.builder()
                 .setCustomer(user.getStripeCustomerId())
-                .setReturnUrl("https://wintaibot.com/subscription")
+                .setLimit(10L)
                 .build();
-
-        var session = com.stripe.model.billingportal.Session.create(params);
-
-        Map<String, String> result = new HashMap<>();
-        result.put("url", session.getUrl());
+        var invoices = com.stripe.model.Invoice.list(params);
+        java.util.List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (var inv : invoices.getData()) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", inv.getId());
+            item.put("number", inv.getNumber());
+            item.put("status", inv.getStatus());
+            item.put("amountPaid", inv.getAmountPaid());
+            item.put("currency", inv.getCurrency());
+            item.put("created", inv.getCreated());
+            item.put("invoicePdf", inv.getInvoicePdf());
+            item.put("hostedInvoiceUrl", inv.getHostedInvoiceUrl());
+            result.add(item);
+        }
         return result;
     }
 
