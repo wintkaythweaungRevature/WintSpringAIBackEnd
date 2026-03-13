@@ -1,4 +1,4 @@
-package com.example.Controller;
+package com.example.controller;
 
 import com.example.entity.User;
 import com.example.service.StripeService;

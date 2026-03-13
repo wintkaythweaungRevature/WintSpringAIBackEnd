@@ -234,6 +234,34 @@ public class StripeService {
         return result;
     }
 
+    /** Returns the last 10 invoices for the user from Stripe. */
+    public java.util.List<Map<String, Object>> getInvoices(Long userId) throws Exception {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        if (user.getStripeCustomerId() == null || user.getStripeCustomerId().isBlank()) {
+            return java.util.Collections.emptyList();
+        }
+        var params = com.stripe.param.InvoiceListParams.builder()
+                .setCustomer(user.getStripeCustomerId())
+                .setLimit(10L)
+                .build();
+        var invoices = com.stripe.model.Invoice.list(params);
+        java.util.List<Map<String, Object>> result = new java.util.ArrayList<>();
+        for (var inv : invoices.getData()) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", inv.getId());
+            item.put("number", inv.getNumber());
+            item.put("status", inv.getStatus());
+            item.put("amountPaid", inv.getAmountPaid());
+            item.put("currency", inv.getCurrency());
+            item.put("created", inv.getCreated());
+            item.put("invoicePdf", inv.getInvoicePdf());
+            item.put("hostedInvoiceUrl", inv.getHostedInvoiceUrl());
+            result.add(item);
+        }
+        return result;
+    }
+
     public void handleWebhook(String payload, String sigHeader) throws Exception {
         var event = com.stripe.net.Webhook.constructEvent(payload, sigHeader, webhookSecret);
 
