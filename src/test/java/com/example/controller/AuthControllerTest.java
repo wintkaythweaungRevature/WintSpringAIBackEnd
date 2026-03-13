@@ -1,7 +1,7 @@
 package com.example.controller;
 
+import com.example.Controller.AuthController;
 import com.example.dto.AuthResponse;
-import com.example.dto.RegisterRequest;
 import com.example.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;

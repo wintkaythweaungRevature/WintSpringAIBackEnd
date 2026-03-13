@@ -1,4 +1,4 @@
-package com.example.config;
+package com.example.Config;
 
 import com.example.entity.Subscription;
 import com.example.entity.Subscription.PlanType;
