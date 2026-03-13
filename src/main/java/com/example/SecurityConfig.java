@@ -50,6 +50,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/health/**").permitAll()
                 .requestMatchers("/sitemap.xml").permitAll()
                 .requestMatchers("/error").permitAll()
+                
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/ai/**").authenticated()
                 .requestMatchers("/api/audio/**").authenticated()
@@ -84,9 +85,11 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(List.of("*"));
 
         configuration.setAllowCredentials(true);
-
+configuration.setExposedHeaders(Arrays.asList("Authorization"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+        configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
         return source;
     }
 }
