@@ -1,6 +1,7 @@
 package com.example.controller;
 
 import com.example.entity.User;
+import com.example.service.StripeService;
 import com.example.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,9 +20,11 @@ public class AdminController {
 
     private static final Logger log = LoggerFactory.getLogger(AdminController.class);
     private final UserService userService;
+    private final StripeService stripeService;
 
-    public AdminController(UserService userService) {
+    public AdminController(UserService userService, StripeService stripeService) {
         this.userService = userService;
+        this.stripeService = stripeService;
     }
 
     private boolean isAdmin(UserDetails userDetails) {
@@ -46,6 +49,7 @@ public class AdminController {
             m.put("membershipType", u.getMembershipType());
             m.put("role", u.getRole());
             m.put("active", u.isActive());
+            m.put("stripeCustomerId", u.getStripeCustomerId());
             m.put("createdAt", u.getCreatedAt());
             m.put("deactivatedAt", u.getDeactivatedAt());
             return m;
@@ -53,7 +57,10 @@ public class AdminController {
         return ResponseEntity.ok(result);
     }
 
-    /** Activate a user account (admin only). */
+    /**
+     * Activate a user account (admin only).
+     * Account is restored as FREE — user must re-subscribe to regain MEMBER access.
+     */
     @PostMapping("/users/{userId}/activate")
     public ResponseEntity<?> activateUser(@PathVariable Long userId,
                                           @AuthenticationPrincipal UserDetails userDetails) {
@@ -62,13 +69,19 @@ public class AdminController {
         }
         try {
             userService.adminActivateUser(userId);
-            return ResponseEntity.ok(Map.of("message", "User account activated successfully"));
+            return ResponseEntity.ok(Map.of(
+                    "message", "User account activated. Membership set to FREE — user must re-subscribe.",
+                    "membershipType", "FREE"
+            ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
-    /** Deactivate a user account (admin only). */
+    /**
+     * Deactivate a user account (admin only).
+     * Cancels any active Stripe subscription and sets membership to FREE.
+     */
     @PostMapping("/users/{userId}/deactivate")
     public ResponseEntity<?> deactivateUser(@PathVariable Long userId,
                                             @AuthenticationPrincipal UserDetails userDetails) {
@@ -76,8 +89,21 @@ public class AdminController {
             return ResponseEntity.status(403).body(Map.of("error", "Admin access required"));
         }
         try {
+            // Cancel Stripe subscription if active
+            User user = userService.findById(userId);
+            if (user.getStripeCustomerId() != null && "MEMBER".equals(user.getMembershipType())) {
+                try {
+                    stripeService.cancelSubscriptionAtPeriodEnd(userId);
+                } catch (Exception e) {
+                    log.warn("Could not cancel Stripe subscription for user {}: {}", userId, e.getMessage());
+                }
+            }
+            // Set membership FREE then deactivate
+            userService.updateMembership(userId, "FREE");
             userService.adminDeactivateUser(userId);
-            return ResponseEntity.ok(Map.of("message", "User account deactivated successfully"));
+            return ResponseEntity.ok(Map.of(
+                    "message", "User account deactivated and subscription cancelled."
+            ));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
