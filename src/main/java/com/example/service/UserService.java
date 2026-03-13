@@ -105,20 +105,20 @@ public class UserService {
      * If the period end date has passed, this syncs the user to FREE and returns false so member-only features are blocked.
      */
     public boolean hasActivePaidAccess(User user) {
+        // Check subscription record first
         Optional<Subscription> opt = getActiveMemberSubscription(user);
-        if (opt.isEmpty()) {
-            return false;
-        }
-        Subscription sub = opt.get();
-        LocalDateTime periodEnd = sub.getCurrentPeriodEnd();
-        if (periodEnd == null) {
+        if (opt.isPresent()) {
+            Subscription sub = opt.get();
+            LocalDateTime periodEnd = sub.getCurrentPeriodEnd();
+            if (periodEnd == null) return true;
+            if (periodEnd.isBefore(LocalDateTime.now())) {
+                syncExpiredSubscription(user, sub);
+                return false;
+            }
             return true;
         }
-        if (periodEnd.isBefore(LocalDateTime.now())) {
-            syncExpiredSubscription(user, sub);
-            return false;
-        }
-        return true;
+        // Fallback: trust the membershipType field (set by admin or webhook)
+        return "MEMBER".equals(user.getMembershipType());
     }
 
     /** Marks subscription as expired and sets user membership to FREE when period end has passed. */
