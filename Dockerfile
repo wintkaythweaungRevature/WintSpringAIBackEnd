@@ -1,20 +1,28 @@
 # Stage 1: Build
-FROM maven:3.8.4-openjdk-17-slim AS build
+FROM maven:3.9-eclipse-temurin-17-alpine AS build
 WORKDIR /app
+
+# Copy pom and download dependencies
 COPY pom.xml .
-RUN mvn dependency:go-offline
-COPY src ./src
-RUN mvn clean package -DskipTests
+RUN mvn dependency:go-offline -B
 
-# Stage 2: Runtime
-FROM eclipse-temurin:17-jdk-alpine
+# Copy source and build
+COPY src ./src
+RUN mvn package -DskipTests -B
+
+# Resolve JAR name from Maven output (supports any finalName in pom.xml)
+RUN JAR_FILE=$(ls target/*.jar | grep -v original | head -1) && cp "$JAR_FILE" target/app.jar
+
+# Stage 2: Run
+FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 
-# GitHub Actions သို့မဟုတ် AWS ကနေ ပို့လိုက်တဲ့ Argument ကို လက်ခံဖို့
-ARG SPRING_AI_OPENAI_API_KEY
-# လက်ခံရရှိတဲ့ Argument ကို Environment Variable အဖြစ် သတ်မှတ်ပေးခြင်း
-ENV SPRING_AI_OPENAI_API_KEY=${SPRING_AI_OPENAI_API_KEY}
+# Create non-root user
+RUN addgroup -S spring && adduser -S spring -G spring
+USER spring:spring
 
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /app/target/app.jar app.jar
+
 EXPOSE 8080
+
 ENTRYPOINT ["java", "-jar", "app.jar"]
