@@ -105,20 +105,20 @@ public class UserService {
      * If the period end date has passed, this syncs the user to FREE and returns false so member-only features are blocked.
      */
     public boolean hasActivePaidAccess(User user) {
+        // Check subscription record first
         Optional<Subscription> opt = getActiveMemberSubscription(user);
-        if (opt.isEmpty()) {
-            return false;
-        }
-        Subscription sub = opt.get();
-        LocalDateTime periodEnd = sub.getCurrentPeriodEnd();
-        if (periodEnd == null) {
+        if (opt.isPresent()) {
+            Subscription sub = opt.get();
+            LocalDateTime periodEnd = sub.getCurrentPeriodEnd();
+            if (periodEnd == null) return true;
+            if (periodEnd.isBefore(LocalDateTime.now())) {
+                syncExpiredSubscription(user, sub);
+                return false;
+            }
             return true;
         }
-        if (periodEnd.isBefore(LocalDateTime.now())) {
-            syncExpiredSubscription(user, sub);
-            return false;
-        }
-        return true;
+        // Fallback: trust the membershipType field (set by admin or webhook)
+        return "MEMBER".equals(user.getMembershipType());
     }
 
     /** Marks subscription as expired and sets user membership to FREE when period end has passed. */
@@ -159,6 +159,29 @@ public class UserService {
         user = userRepo.findById(user.getId()).orElse(user);
         String token = jwtService.generateToken(user.getEmail(), user.getId());
         return new AuthResponse(token, user.getEmail(), user.getMembershipType() != null ? user.getMembershipType() : "FREE", user.getId());
+    }
+
+    /** Admin: list all users with basic info. */
+    public java.util.List<User> getAllUsers() {
+        return userRepo.findAll();
+    }
+
+    /** Admin: activate a user account by id. */
+    @Transactional
+    public void adminActivateUser(Long userId) {
+        User user = findById(userId);
+        user.setActive(true);
+        user.setDeactivatedAt(null);
+        userRepo.save(user);
+    }
+
+    /** Admin: deactivate a user account by id. */
+    @Transactional
+    public void adminDeactivateUser(Long userId) {
+        User user = findById(userId);
+        user.setActive(false);
+        user.setDeactivatedAt(java.time.LocalDateTime.now());
+        userRepo.save(user);
     }
 
     /** Ensures user has a role and at least one active subscription (for legacy/old members). */

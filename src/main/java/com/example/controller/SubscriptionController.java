@@ -143,6 +143,24 @@ public class SubscriptionController {
         }
     }
 
+    /** Returns the last 10 invoices for the current user from Stripe. */
+    @GetMapping("/invoices")
+    public ResponseEntity<?> getInvoices(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Authentication required"));
+        }
+        try {
+            User user = userService.findByEmail(userDetails.getUsername());
+            var invoices = stripeService.getInvoices(user.getId());
+            return ResponseEntity.ok(invoices);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            log.error("Failed to fetch invoices", e);
+            return ResponseEntity.badRequest().body(Map.of("error", "Could not retrieve invoices."));
+        }
+    }
+
     /** Returns a one-time URL to Stripe Customer Portal (invoices, update payment, cancel). */
     @GetMapping("/portal")
     public ResponseEntity<?> createPortalSession(@AuthenticationPrincipal UserDetails userDetails) {
