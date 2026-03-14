@@ -175,16 +175,18 @@ public class ChatController {
 
     /**
      * Interview Prep Kit: resume + job description → match score, gaps analysis,
-     * 30 interview questions, 20 flashcards. Expects multipart: file (PDF), jd (string).
+     * 30 interview questions (10 Technical, 10 Behavioral, 10 Role-specific), 20 flashcards.
+     * Requires MEMBER subscription. Expects multipart: file (PDF), jd (string).
      */
     @PostMapping(value = "/prepare-interview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> prepareInterview(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam("file") MultipartFile file,
-            @RequestParam("jd") String jd) throws IOException {
+            @RequestParam("jd") String jobDescription) throws IOException {
+        // Check member subscription
         ResponseEntity<?> denied = requirePaidSubscription(userDetails);
         if (denied != null) return denied;
-        if (file.isEmpty() || jd == null || jd.isBlank()) {
+        if (file.isEmpty() || jobDescription == null || jobDescription.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "PDF file and job description (jd) are required"));
         }
         String resumeText = readPdf(file);
@@ -192,43 +194,38 @@ public class ChatController {
             return ResponseEntity.badRequest().body(Map.of("error", "Could not extract text from the uploaded PDF"));
         }
 
-        String prompt = """
-            You are an expert career coach. Given a resume (from PDF) and a job description (JD), produce a complete JSON object with this EXACT structure. Return ONLY valid JSON, no markdown, no extra text.
+        String aiPrompt = """
+            You are an expert Technical Recruiter. Analyze the JD and Resume provided.
 
-            Resume text:
-            ---
-            %s
-            ---
+            JD: %s
 
-            Job description:
-            ---
-            %s
-            ---
+            Resume: %s
 
-            Produce a JSON object with these keys:
-            - match_percentage: integer 0-100, how well the resume matches the JD keywords/skills
-            - analysis: string, 2-4 paragraphs: (1) keyword match summary, (2) gaps between resume and JD, (3) strengths to emphasize, (4) areas to prepare
-            - questions: array of 30 objects, each { "q": "interview question", "guidance": "brief tip on how to answer" }
-            - flashcards: array of 20 objects, each { "front": "term/concept", "back": "definition or answer" } relevant to the role
+            TASK:
+            1. Compare keywords and experience to give a MATCH_PERCENTAGE (0-100).
+            2. Generate exactly 30 Interview Questions (10 Technical, 10 Behavioral, 10 Role-specific).
+            3. Generate exactly 20 Flashcards for key technical terms and concepts.
 
-            Return ONLY the raw JSON object, no ```json wrapper.
-            """.formatted(resumeText, jd);
+            RETURN ONLY VALID JSON:
+            {
+              "match_percentage": 85,
+              "analysis": "10-line summary of keyword comparison and gaps.",
+              "questions": [{"q": "...", "type": "Technical|Behavioral|Role-specific", "guidance": "...", "tips": "..."}],
+              "flashcards": [{"front": "...", "back": "..."}]
+            }
+            """.formatted(jobDescription, resumeText);
 
-        String raw = chatModel.call(prompt);
-        String jsonStr = raw.strip();
-        if (jsonStr.startsWith("```")) {
-            int start = jsonStr.indexOf("{");
-            int end = jsonStr.lastIndexOf("}") + 1;
-            if (start >= 0 && end > start) jsonStr = jsonStr.substring(start, end);
-        }
+        String aiResponse = chatModel.call(aiPrompt);
+        String cleanedJson = aiResponse.replaceAll("```json", "").replaceAll("```", "").trim();
+
         try {
             com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
             @SuppressWarnings("unchecked")
-            Map<String, Object> result = mapper.readValue(jsonStr, Map.class);
+            Map<String, Object> result = mapper.readValue(cleanedJson, Map.class);
             return ResponseEntity.ok().body(result);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "AI response was not valid JSON. Please try again.", "raw", jsonStr.substring(0, Math.min(200, jsonStr.length()))));
+                    .body(Map.of("error", "AI response was not valid JSON. Please try again.", "raw", cleanedJson.substring(0, Math.min(200, cleanedJson.length()))));
         }
     }
 
