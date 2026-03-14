@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(find . -maxdepth 2 -name application*.properties -o -name application*.yml)",
+      "Bash(grep -E \"\\\\.\\(yml|yaml|json\\)$\")"
+    ]
+  }
+}
