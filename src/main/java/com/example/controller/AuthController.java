@@ -6,6 +6,8 @@ import com.example.dto.RegisterRequest;
 import com.example.entity.User;
 import com.example.service.UserService;
 import org.springframework.http.ResponseEntity;
+
+import java.util.Map;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,15 +27,18 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
-    if (request.getEmail() == null || request.getEmail().isBlank()) {
-        return ResponseEntity.badRequest().body("Email is required"); // 400 ပြန်ရန်
+    public ResponseEntity<?> register(@RequestBody(required = false) RegisterRequest request) {
+        if (request == null || request.getEmail() == null || request.getEmail().isBlank()
+                || request.getPassword() == null || request.getPassword().isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email and password are required"));
+        }
+        try {
+            AuthResponse response = userService.register(request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
     }
-    if (request.getPassword() == null || request.getPassword().isBlank()) {
-        return ResponseEntity.badRequest().body("Password is required"); // 400 ပြန်ရန်
-    }
-    // ... ကျန်တဲ့ register logic
-}
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody(required = false) AuthRequest request) {
@@ -68,6 +73,39 @@ public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
             return ResponseEntity.status(401).build();
         } catch (Exception e) {
             return ResponseEntity.status(401).build();
+        }
+    }
+
+    @PostMapping("/deactivate")
+    public ResponseEntity<?> deactivateAccount(@AuthenticationPrincipal UserDetails userDetails,
+                                               @RequestBody(required = false) Map<String, String> body) {
+        if (userDetails == null) {
+            return ResponseEntity.status(401).body(Map.of("error", "Authentication required"));
+        }
+        String password = body != null ? body.get("password") : null;
+        if (password == null || password.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Password is required to deactivate your account"));
+        }
+        try {
+            User user = userService.findByEmail(userDetails.getUsername());
+            userService.deactivateAccount(user.getId(), password);
+            return ResponseEntity.ok(Map.of("message", "Account deactivated successfully"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/reactivate")
+    public ResponseEntity<?> reactivateAccount(@RequestBody(required = false) Map<String, String> body) {
+        if (body == null || body.get("email") == null || body.get("email").isBlank()
+                || body.get("password") == null || body.get("password").isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Email and password are required"));
+        }
+        try {
+            AuthResponse response = userService.reactivateAccount(body.get("email"), body.get("password"));
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 

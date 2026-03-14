@@ -192,9 +192,9 @@ public class ChatController {
 
         TASK:
         1. Compare keywords and experience to give a MATCH_PERCENTAGE (0-100).
-      2. Generate exactly 5 Interview Questions. // ၃၀ မှ ၅ ခုသို့ ခေတ္တလျှော့ပါ
-      3. Generate exactly 5 Flashcards. // ၂၀ မှ ၅ ခုသို့ ခေတ္တလျှော့ပါ
-        4. Provide a brief analysis of the candidate's strengths and weaknesses based on the JD requirements.
+        2. Generate exactly 30 Interview Questions (10 Technical, 10 Behavioral, 10 Role-specific).
+        3. Generate exactly 20 Flashcards for key technical terms and concepts.
+
         RETURN ONLY VALID JSON:
         {
           "match_percentage": 85,
