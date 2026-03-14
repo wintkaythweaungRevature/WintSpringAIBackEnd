@@ -116,6 +116,8 @@ public class ChatController {
         if (denied != null) return denied;
 
         String pdfText = readPdf(file);
+        String safePrompt = userPrompt.replace("%", "%%");
+        String safeContent = pdfText.replace("%", "%%");
 
         String aiPrompt = """
                 You are a data extraction assistant. Analyze the following PDF content and return ONLY a valid minified JSON object.
@@ -130,7 +132,7 @@ public class ChatController {
                 No markdown code blocks, no extra text.
                 Focus: %s
                 Content: %s
-                """.formatted(userPrompt, pdfText);
+                """.formatted(safePrompt, safeContent);
 
         return processAiJsonResponse(aiPrompt);
     }
@@ -184,6 +186,10 @@ public class ChatController {
             return ResponseEntity.badRequest().body(Map.of("error", "Could not extract text from the PDF"));
         }
 
+        // Escape % so String.formatted() does not treat user input as format specifiers
+        String safeJd = jobDescription.replace("%", "%%");
+        String safeResume = resumeText.replace("%", "%%");
+
         String aiPrompt = """
       You are an expert Technical Recruiter. Analyze the JD and Resume provided.
         
@@ -202,44 +208,43 @@ public class ChatController {
           "questions": [{"q": "...", "type": "...", "guidance": "...", "tips": "..."}],
           "flashcards": [{"front": "...", "back": "..."}]
         }
-        """.formatted(jobDescription, resumeText);
+        """.formatted(safeJd, safeResume);
 
         return processAiJsonResponse(aiPrompt);
     }
 
     // Helper to handle AI responses and JSON cleaning
     private ResponseEntity<?> processAiJsonResponse(String prompt) {
-    String aiResponse = "";
-    try {
-        aiResponse = chatModel.call(prompt);
-        
-        // Debugging: AI ဘာပြန်လဲဆိုတာ Terminal မှာ ကြည့်ဖို့ (အရေးကြီးသည်)
-        System.out.println("DEBUG AI RAW RESPONSE: " + aiResponse);
+        String aiResponse = null;
+        try {
+            aiResponse = chatModel.call(prompt);
+            if (aiResponse == null || aiResponse.isBlank()) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "AI service returned no response."));
+            }
 
-        int start = aiResponse.indexOf('{');
-        int end = aiResponse.lastIndexOf('}');
+            int start = aiResponse.indexOf('{');
+            int end = aiResponse.lastIndexOf('}');
+            if (start == -1 || end == -1 || end < start) {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                        .body(Map.of("error", "AI did not return valid JSON."));
+            }
 
-        if (start == -1 || end == -1) {
+            String cleanedJson = aiResponse.substring(start, end + 1).trim();
+            Map<String, Object> result = objectMapper.readValue(cleanedJson, Map.class);
+            return ResponseEntity.ok(result);
+
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "AI service failed to return JSON logic. Raw: " + aiResponse));
+                    .body(Map.of(
+                            "error", "AI output was not valid JSON.",
+                            "rawResponse", aiResponse != null ? aiResponse : ""));
+        } catch (Exception e) {
+            String msg = e.getMessage() != null ? e.getMessage() : "Unknown error";
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Processing error: " + msg));
         }
-
-        String cleanedJson = aiResponse.substring(start, end + 1);
-        
-        // Jackson parsing
-        Map<String, Object> result = objectMapper.readValue(cleanedJson, Map.class);
-        return ResponseEntity.ok(result);
-
-    } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
-        System.err.println("JSON Parsing Error: " + e.getMessage());
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "AI output was not valid JSON."));
-    } catch (Exception e) {
-        System.err.println("General Error in AI Processing: " + e.getMessage());
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of("error", "Processing error: " + e.getMessage()));
     }
-}
     @PostMapping("/reply")
     public ResponseEntity<?> generateReply(@AuthenticationPrincipal UserDetails userDetails,
                                            @RequestBody Map<String, String> payload) {
