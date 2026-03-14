@@ -25,10 +25,15 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@RequestBody RegisterRequest request) {
-        AuthResponse response = userService.register(request);
-        return ResponseEntity.ok(response);
+public ResponseEntity<?> register(@RequestBody RegisterRequest request) {
+    if (request.getEmail() == null || request.getEmail().isBlank()) {
+        return ResponseEntity.badRequest().body("Email is required"); // 400 ပြန်ရန်
     }
+    if (request.getPassword() == null || request.getPassword().isBlank()) {
+        return ResponseEntity.badRequest().body("Password is required"); // 400 ပြန်ရန်
+    }
+    // ... ကျန်တဲ့ register logic
+}
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody(required = false) AuthRequest request) {
