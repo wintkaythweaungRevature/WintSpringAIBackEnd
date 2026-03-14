@@ -1,8 +1,11 @@
 package com.example.controller;
 
+import com.example.Controller.StripeWebhookController;
 import com.example.service.StripeService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -14,16 +17,15 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(
-    value = StripeWebhookController.class,
-    excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class}
-)
+@WebMvcTest(value = StripeWebhookController.class,
+    excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class})
 class StripeWebhookControllerTest {
 
     @Autowired MockMvc mockMvc;
 
     @MockBean StripeService stripeService;
     @MockBean com.example.service.JwtService jwtService;
+    @MockBean com.example.service.UserDetailsServiceImpl userDetailsService;
 
     @Test
     void handleWebhook_validPayload_returns200OK() throws Exception {

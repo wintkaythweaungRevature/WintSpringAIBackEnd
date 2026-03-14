@@ -68,7 +68,9 @@ public class ChatController {
             User user = userService.findByEmail(userDetails.getUsername());
             if (!userService.hasActivePaidAccess(user)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body(Map.of("error", "Active subscription required. Your plan may have expired or been canceled."));
+                    .body(Map.of(
+                            "requiresSubscription", true,
+                            "message", "To use this feature, please subscribe to a plan. Visit the subscription page to upgrade and unlock all features."));
             }
             return null;
         } catch (IllegalArgumentException e) {
@@ -170,6 +172,65 @@ public class ChatController {
 
               return new ResponseEntity<>(response.getResult().getOutput(), HttpStatus.OK);
         }
+
+    /**
+     * Interview Prep Kit: resume + job description → match score, gaps analysis,
+     * 30 interview questions, 20 flashcards. Expects multipart: file (PDF), jd (string).
+     */
+    @PostMapping(value = "/prepare-interview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> prepareInterview(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("jd") String jd) throws IOException {
+        ResponseEntity<?> denied = requirePaidSubscription(userDetails);
+        if (denied != null) return denied;
+        if (file.isEmpty() || jd == null || jd.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "PDF file and job description (jd) are required"));
+        }
+        String resumeText = readPdf(file);
+        if (resumeText == null || resumeText.isBlank()) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Could not extract text from the uploaded PDF"));
+        }
+
+        String prompt = """
+            You are an expert career coach. Given a resume (from PDF) and a job description (JD), produce a complete JSON object with this EXACT structure. Return ONLY valid JSON, no markdown, no extra text.
+
+            Resume text:
+            ---
+            %s
+            ---
+
+            Job description:
+            ---
+            %s
+            ---
+
+            Produce a JSON object with these keys:
+            - match_percentage: integer 0-100, how well the resume matches the JD keywords/skills
+            - analysis: string, 2-4 paragraphs: (1) keyword match summary, (2) gaps between resume and JD, (3) strengths to emphasize, (4) areas to prepare
+            - questions: array of 30 objects, each { "q": "interview question", "guidance": "brief tip on how to answer" }
+            - flashcards: array of 20 objects, each { "front": "term/concept", "back": "definition or answer" } relevant to the role
+
+            Return ONLY the raw JSON object, no ```json wrapper.
+            """.formatted(resumeText, jd);
+
+        String raw = chatModel.call(prompt);
+        String jsonStr = raw.strip();
+        if (jsonStr.startsWith("```")) {
+            int start = jsonStr.indexOf("{");
+            int end = jsonStr.lastIndexOf("}") + 1;
+            if (start >= 0 && end > start) jsonStr = jsonStr.substring(start, end);
+        }
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> result = mapper.readValue(jsonStr, Map.class);
+            return ResponseEntity.ok().body(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "AI response was not valid JSON. Please try again.", "raw", jsonStr.substring(0, Math.min(200, jsonStr.length()))));
+        }
+    }
 
     @PostMapping("/reply")
     public ResponseEntity<?> generateReply(@AuthenticationPrincipal UserDetails userDetails,

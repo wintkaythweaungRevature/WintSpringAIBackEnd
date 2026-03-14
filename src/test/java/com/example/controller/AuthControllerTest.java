@@ -6,24 +6,23 @@ import com.example.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.example.dto.RegisterRequest;
+
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(
-    value = AuthController.class,
-    excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class}
-)
+@WebMvcTest(value = AuthController.class)
+@org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc(addFilters = false)
 class AuthControllerTest {
 
     @Autowired MockMvc mockMvc;
@@ -31,6 +30,7 @@ class AuthControllerTest {
 
     @MockBean UserService userService;
     @MockBean com.example.service.JwtService jwtService;
+    @MockBean com.example.service.UserDetailsServiceImpl userDetailsService;
 
     // ─── POST /api/auth/register ─────────────────────────────────────────────
 
@@ -41,7 +41,7 @@ class AuthControllerTest {
 
         Map<String, String> body = Map.of(
                 "email", "user@example.com",
-                "password", "pass123",
+                "password", "Pass1234",
                 "firstName", "Test",
                 "lastName", "User"
         );
@@ -78,11 +78,36 @@ class AuthControllerTest {
     }
 
     @Test
+    void register_withWeakPassword_returns400() throws Exception {
+        when(userService.register(argThat((RegisterRequest req) ->
+                req != null && req.getPassword() != null && req.getPassword().length() < 8)))
+                .thenThrow(new IllegalArgumentException("Password must be at least 8 characters long"));
+
+        Map<String, String> body = Map.of(
+                "email", "user@example.com",
+                "password", "short",
+                "firstName", "Test",
+                "lastName", "User"
+        );
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("Password must be at least 8 characters long"));
+    }
+
+    @Test
     void register_whenEmailAlreadyExists_returns400() throws Exception {
         when(userService.register(any()))
                 .thenThrow(new IllegalArgumentException("Email already registered"));
 
-        Map<String, String> body = Map.of("email", "dup@example.com", "password", "pass");
+        Map<String, String> body = Map.of(
+                "email", "dup@example.com",
+                "password", "Pass1234",
+                "firstName", "Test",
+                "lastName", "User"
+        );
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -1,4 +1,4 @@
-package com.example.controller;
+package com.example.Controller;
 
 import com.example.entity.DocumentMetadata;
 import com.example.entity.User;
@@ -164,7 +164,8 @@ public class RagController {
             User user = userService.findByEmail(userDetails.getUsername());
             if (!userService.hasActivePaidAccess(user)) {
                 return ResponseEntity.status(403).body(Map.of(
-                        "error", "Member subscription required to use Document Q&A"));
+                        "requiresSubscription", true,
+                        "message", "To use Document Q&A, please subscribe to a plan. Visit the subscription page to upgrade and unlock this feature."));
             }
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(401).body(Map.of("error", "Authentication required"));

@@ -37,6 +37,7 @@ public class UserService {
         if (userRepo.existsByEmail(req.getEmail())) {
             throw new IllegalArgumentException("Email already registered");
         }
+        validatePassword(req.getPassword());
         User user = new User(
                 req.getEmail(),
                 passwordEncoder.encode(req.getPassword()),
@@ -182,6 +183,31 @@ public class UserService {
         user.setActive(false);
         user.setDeactivatedAt(java.time.LocalDateTime.now());
         userRepo.save(user);
+    }
+
+    /**
+     * Validates password strength. Requires:
+     * - Minimum 8 characters
+     * - At least one uppercase letter
+     * - At least one lowercase letter
+     * - At least one digit
+     */
+    private void validatePassword(String password) {
+        if (password == null || password.isBlank()) {
+            throw new IllegalArgumentException("Password is required");
+        }
+        if (password.length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters long");
+        }
+        if (!password.matches(".*[A-Z].*")) {
+            throw new IllegalArgumentException("Password must contain at least one uppercase letter");
+        }
+        if (!password.matches(".*[a-z].*")) {
+            throw new IllegalArgumentException("Password must contain at least one lowercase letter");
+        }
+        if (!password.matches(".*\\d.*")) {
+            throw new IllegalArgumentException("Password must contain at least one digit");
+        }
     }
 
     /** Ensures user has a role and at least one active subscription (for legacy/old members). */

@@ -7,11 +7,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.ai.image.Image;
 import org.springframework.ai.image.ImageModel;
 import org.springframework.ai.image.ImageResponse;
+import org.springframework.ai.image.ImageGeneration;
 import org.springframework.ai.openai.OpenAiAudioTranscriptionModel;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
@@ -27,10 +26,8 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(
-    value = ChatController.class,
-    excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class}
-)
+@WebMvcTest(value = ChatController.class)
+@org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc(addFilters = false)
 class ChatControllerTest {
 
     @Autowired MockMvc mockMvc;
@@ -42,6 +39,7 @@ class ChatControllerTest {
     @MockBean EmailGeneratorService emailGeneratorService;
     @MockBean UserService userService;
     @MockBean com.example.service.JwtService jwtService;
+    @MockBean com.example.service.UserDetailsServiceImpl userDetailsService;
 
     // ─── GET /api/ai/test ─────────────────────────────────────────────────────
 
@@ -101,8 +99,9 @@ class ChatControllerTest {
 
         mockMvc.perform(get("/api/ai/generate-image").param("prompt", "A cat"))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error").value(
-                        org.hamcrest.Matchers.containsString("subscription required")));
+                .andExpect(jsonPath("$.requiresSubscription").value(true))
+                .andExpect(jsonPath("$.message").value(
+                        org.hamcrest.Matchers.containsString("subscribe")));
     }
 
     @Test
@@ -115,11 +114,11 @@ class ChatControllerTest {
         Image image = mock(Image.class);
         when(image.getUrl()).thenReturn("https://oaidalleapiprodscus.blob.core.windows.net/image.png");
 
-        org.springframework.ai.image.ImageResult imageResult = mock(org.springframework.ai.image.ImageResult.class);
-        when(imageResult.getOutput()).thenReturn(image);
+        ImageGeneration imageGeneration = mock(ImageGeneration.class);
+        when(imageGeneration.getOutput()).thenReturn(image);
 
         ImageResponse imageResponse = mock(ImageResponse.class);
-        when(imageResponse.getResult()).thenReturn(imageResult);
+        when(imageResponse.getResult()).thenReturn(imageGeneration);
 
         when(userService.findByEmail("member@example.com")).thenReturn(memberUser);
         when(userService.hasActivePaidAccess(memberUser)).thenReturn(true);

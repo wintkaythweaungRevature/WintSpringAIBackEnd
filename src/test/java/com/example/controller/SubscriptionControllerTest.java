@@ -6,8 +6,6 @@ import com.example.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
-import org.springframework.boot.autoconfigure.security.servlet.SecurityFilterAutoConfiguration;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
@@ -18,10 +16,8 @@ import java.util.Map;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(
-    value = SubscriptionController.class,
-    excludeAutoConfiguration = {SecurityAutoConfiguration.class, SecurityFilterAutoConfiguration.class}
-)
+@WebMvcTest(value = SubscriptionController.class)
+@org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc(addFilters = false)
 class SubscriptionControllerTest {
 
     @Autowired MockMvc mockMvc;
@@ -30,6 +26,7 @@ class SubscriptionControllerTest {
     @MockBean StripeService stripeService;
     @MockBean UserService userService;
     @MockBean com.example.service.JwtService jwtService;
+    @MockBean com.example.service.UserDetailsServiceImpl userDetailsService;
 
     // ─── Unauthenticated access (null principal → controller returns 401) ────
 

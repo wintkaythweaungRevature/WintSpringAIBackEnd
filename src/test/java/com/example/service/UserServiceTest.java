@@ -39,7 +39,7 @@ class UserServiceTest {
     void setUp() {
         registerRequest = new RegisterRequest();
         registerRequest.setEmail("test@example.com");
-        registerRequest.setPassword("password123");
+        registerRequest.setPassword("Password123");
         registerRequest.setFirstName("Test");
         registerRequest.setLastName("User");
 
@@ -53,7 +53,7 @@ class UserServiceTest {
     @Test
     void register_success_returnsTokenAndEmail() {
         when(userRepo.existsByEmail("test@example.com")).thenReturn(false);
-        when(passwordEncoder.encode("password123")).thenReturn("encoded-pass");
+        when(passwordEncoder.encode("Password123")).thenReturn("encoded-pass");
         when(userRepo.save(any(User.class))).thenReturn(savedUser);
         when(subscriptionRepo.save(any(Subscription.class))).thenReturn(new Subscription());
         when(jwtService.generateToken("test@example.com", 1L)).thenReturn("fake-token");
@@ -75,9 +75,36 @@ class UserServiceTest {
     }
 
     @Test
+    void register_throwsWhenPasswordTooShort() {
+        registerRequest.setPassword("Short1");
+
+        assertThatThrownBy(() -> userService.register(registerRequest))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Password must be at least 8 characters long");
+    }
+
+    @Test
+    void register_throwsWhenPasswordMissingUppercase() {
+        registerRequest.setPassword("password123");
+
+        assertThatThrownBy(() -> userService.register(registerRequest))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Password must contain at least one uppercase letter");
+    }
+
+    @Test
+    void register_throwsWhenPasswordMissingDigit() {
+        registerRequest.setPassword("PasswordOnly");
+
+        assertThatThrownBy(() -> userService.register(registerRequest))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Password must contain at least one digit");
+    }
+
+    @Test
     void register_savesUserWithEncodedPassword() {
         when(userRepo.existsByEmail(anyString())).thenReturn(false);
-        when(passwordEncoder.encode("password123")).thenReturn("hashed-pw");
+        when(passwordEncoder.encode("Password123")).thenReturn("hashed-pw");
         when(userRepo.save(any(User.class))).thenReturn(savedUser);
         when(subscriptionRepo.save(any())).thenReturn(new Subscription());
         when(jwtService.generateToken(anyString(), anyLong())).thenReturn("tok");
