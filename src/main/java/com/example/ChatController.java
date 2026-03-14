@@ -155,13 +155,17 @@ public class ChatController {
 
         return processAiJsonResponse(aiPrompt);
     }
-
-    private String readPdf(MultipartFile file) throws IOException {
-        try (PDDocument document = PDDocument.load(file.getInputStream())) {
-            PDFTextStripper stripper = new PDFTextStripper();
-            return stripper.getText(document);
-        }
+private String readPdf(MultipartFile file) throws IOException {
+    try (PDDocument document = PDDocument.load(file.getInputStream())) {
+        PDFTextStripper stripper = new PDFTextStripper();
+        String text = stripper.getText(document);
+        // Special characters တွေကို ဖယ်ရှားပြီး clean လုပ်ခြင်း
+        return text.replaceAll("[^\\x00-\\x7F]", "") // Non-ASCII တွေကို ဖယ်ပါ
+                   .replace("\"", "'")               // Double quotes ကို single quote ပြောင်းပါ
+                   .replace("\n", " ")               // New lines တွေကို space ပြောင်းပါ
+                   .replace("\r", " ");
     }
+}
 
     @PostMapping("/transcribe")
     public ResponseEntity<?> transcribeAudio(
