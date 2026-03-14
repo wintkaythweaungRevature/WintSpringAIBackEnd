@@ -21,8 +21,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,12 +48,18 @@ import java.util.Map;
 @RestController
 public class ChatController {
 
+    private static final Logger log = LoggerFactory.getLogger(ChatController.class);
+    private static final int RAW_RESPONSE_MAX_LEN = 2000;
+
     private final OpenAiChatModel chatModel;
     private final ImageModel imageModel;
     private final OpenAiAudioTranscriptionModel transcriptionModel;
     private final EmailGeneratorService emailGeneratorService;
     private final UserService userService;
     private final ObjectMapper objectMapper; // Shared mapper
+
+    @Value("${spring.ai.openai.api-key:}")
+    private String openaiApiKey;
 
     public ChatController(OpenAiChatModel chatModel, ImageModel imageModel,
                           OpenAiAudioTranscriptionModel transcriptionModel, EmailGeneratorService emailGeneratorService,
@@ -85,6 +95,15 @@ public class ChatController {
     @GetMapping("/test")
     public String test() {
         return "Backend is alive and CORS is configured!";
+    }
+
+    @GetMapping("/status")
+    public ResponseEntity<Map<String, Object>> status() {
+        boolean configured = openaiApiKey != null && !openaiApiKey.isBlank();
+        return ResponseEntity.ok(Map.of(
+                "openaiConfigured", configured,
+                "model", "gpt-3.5-turbo"
+        ));
     }
 
     @GetMapping(value = "/ask-ai", produces = MediaType.TEXT_PLAIN_VALUE)
@@ -172,16 +191,24 @@ public class ChatController {
     public ResponseEntity<?> prepareInterview(
             @AuthenticationPrincipal UserDetails userDetails,
             @RequestParam("file") MultipartFile file,
-            @RequestParam("jd") String jobDescription) throws IOException {
+            @RequestParam(value = "jd", required = false) String jdParam,
+            @RequestParam(value = "jobDescription", required = false) String jobDescParam) {
 
         ResponseEntity<?> denied = requirePaidSubscription(userDetails);
         if (denied != null) return denied;
 
+        String jobDescription = (jdParam != null && !jdParam.isBlank()) ? jdParam : jobDescParam;
         if (file.isEmpty() || jobDescription == null || jobDescription.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("error", "PDF file and job description are required"));
+            return ResponseEntity.badRequest().body(Map.of("error", "PDF file and job description are required. Send 'file' (PDF) and 'jd' or 'jobDescription' as form fields."));
         }
 
-        String resumeText = readPdf(file);
+        String resumeText;
+        try {
+            resumeText = readPdf(file);
+        } catch (IOException e) {
+            log.warn("prepare-interview: PDF read failed: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(Map.of("error", "Could not read PDF. Please ensure it is a valid, unencrypted PDF file."));
+        }
         if (resumeText.isBlank()) {
             return ResponseEntity.badRequest().body(Map.of("error", "Could not extract text from the PDF"));
         }
@@ -235,11 +262,17 @@ public class ChatController {
             return ResponseEntity.ok(result);
 
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            log.warn("processAiJsonResponse: JSON parse failed: {}", e.getMessage());
+            String raw = aiResponse != null ? aiResponse : "";
+            if (raw.length() > RAW_RESPONSE_MAX_LEN) {
+                raw = raw.substring(0, RAW_RESPONSE_MAX_LEN) + "... [truncated]";
+            }
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of(
                             "error", "AI output was not valid JSON.",
-                            "rawResponse", aiResponse != null ? aiResponse : ""));
+                            "rawResponse", raw));
         } catch (Exception e) {
+            log.error("processAiJsonResponse failed", e);
             String msg = e.getMessage() != null ? e.getMessage() : "Unknown error";
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Processing error: " + msg));
