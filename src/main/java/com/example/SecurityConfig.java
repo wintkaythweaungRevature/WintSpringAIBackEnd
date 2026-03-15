@@ -50,6 +50,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/health/**").permitAll()
                 .requestMatchers("/sitemap.xml").permitAll()
                 .requestMatchers("/error").permitAll()
+                .requestMatchers("/api/social/callback/**").permitAll()
                 
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/ai/**").authenticated()
