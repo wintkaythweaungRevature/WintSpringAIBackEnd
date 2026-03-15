@@ -202,7 +202,17 @@ public class VideoContentController {
     }
 
     /**
-     * Viral trends, news, content ideas for users
+     * Viral trends, news for Upload step card. Frontend calls this.
+     * Returns { trends: [...], news: [...] } — 4-5 trends, 2-3 news items.
+     */
+    @GetMapping("/trends")
+    public ResponseEntity<?> getTrends(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        return ResponseEntity.ok(trendingService.getTrendsForUploadStep());
+    }
+
+    /**
+     * Legacy: viral trends, news, content ideas (full format)
      */
     @GetMapping("/trending")
     public ResponseEntity<?> getTrending(@AuthenticationPrincipal UserDetails userDetails) {

@@ -9,6 +9,7 @@ import java.util.Map;
 
 /**
  * Provides viral trends, news, and content ideas for users.
+ * Supports both legacy format (getTrendingInfo) and frontend format (getTrendsForUploadStep).
  */
 @Service
 public class TrendingService {
@@ -17,6 +18,70 @@ public class TrendingService {
 
     public TrendingService(ChatModel chatModel) {
         this.chatModel = chatModel;
+    }
+
+    /**
+     * Returns { trends: [...], news: [...] } for the Upload step "Viral trends & news" card.
+     * trends: 4-5 bullet items (hashtags, formats, best times).
+     * news: 2-3 short platform/news items (algorithm or product updates).
+     */
+    public Map<String, Object> getTrendsForUploadStep() {
+        String prompt = """
+            You are a social media trends analyst. Provide current viral trends and platform news for creators.
+            Return a JSON object with exactly these keys (valid JSON only, no markdown):
+            {
+              "trends": [
+                "hashtag or topic trending now (e.g. #AITools trending...)",
+                "format insight (e.g. Short-form vertical video engagement up 40%...)",
+                "Best posting time: [day] [time]",
+                "one more trend",
+                "one more trend"
+              ],
+              "news": [
+                "Instagram Reels: [algorithm or product update]",
+                "YouTube Shorts: [update]",
+                "TikTok: [update]"
+              ]
+            }
+            trends: 4-5 actionable bullet items. news: 2-3 short platform-specific updates.
+            Be specific and current. Use real platform names.
+            """;
+        try {
+            String response = chatModel.call(new Prompt(prompt)).getResult().getOutput().getContent();
+            return parseTrendsJson(response);
+        } catch (Exception e) {
+            return getDefaultTrendsAndNews();
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> parseTrendsJson(String json) {
+        try {
+            String clean = json.replaceAll("```json\\s*", "").replaceAll("```\\s*", "").trim();
+            Map<String, Object> parsed = new com.fasterxml.jackson.databind.ObjectMapper()
+                .readValue(clean, Map.class);
+            if (parsed.containsKey("trends") && parsed.containsKey("news")) {
+                return parsed;
+            }
+        } catch (Exception ignored) { }
+        return getDefaultTrendsAndNews();
+    }
+
+    private Map<String, Object> getDefaultTrendsAndNews() {
+        return Map.of(
+            "trends", List.of(
+                "#AITools trending across TikTok and Reels",
+                "Short-form vertical video engagement up 40% this quarter",
+                "Best posting time: Tuesday 7 PM",
+                "Behind-the-scenes and tutorial formats performing well",
+                "Original audio prioritized over reused sounds"
+            ),
+            "news", List.of(
+                "Instagram Reels: algorithm now prioritizes original audio.",
+                "YouTube Shorts: 60s clips with strong retention favored.",
+                "TikTok: new Series feature for multi-part content."
+            )
+        );
     }
 
     public Map<String, Object> getTrendingInfo() {
