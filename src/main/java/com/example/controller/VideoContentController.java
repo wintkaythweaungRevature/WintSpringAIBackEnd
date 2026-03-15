@@ -4,8 +4,9 @@ import com.example.entity.PublishJob;
 import com.example.entity.Video;
 import com.example.entity.VideoVariant;
 import com.example.service.*;
-import com.example.service.ApprovalWorkflowService;
 import com.example.service.AnalyticsService;
+import com.example.service.ScheduleService;
+import com.example.service.TrendingService;
 import com.example.service.UserService;
 import com.example.service.VideoPipelineService;
 import com.example.entity.User;
@@ -26,8 +27,9 @@ public class VideoContentController {
 
     private final VideoPipelineService pipelineService;
     private final UserService userService;
-    private final ApprovalWorkflowService approvalService;
+    private final ScheduleService scheduleService;
     private final AnalyticsService analyticsService;
+    private final TrendingService trendingService;
     private final VideoPublishService publishService;
     private final SocialAuthService socialAuthService;
     private final com.example.repository.VideoRepository videoRepo;
@@ -35,15 +37,17 @@ public class VideoContentController {
     private final com.example.repository.PublishJobRepository jobRepo;
 
     public VideoContentController(VideoPipelineService pipelineService, UserService userService,
-                                  ApprovalWorkflowService approvalService, AnalyticsService analyticsService,
-                                  VideoPublishService publishService, SocialAuthService socialAuthService,
+                                  ScheduleService scheduleService, AnalyticsService analyticsService,
+                                  TrendingService trendingService, VideoPublishService publishService,
+                                  SocialAuthService socialAuthService,
                                   com.example.repository.VideoRepository videoRepo,
                                   com.example.repository.VideoVariantRepository variantRepo,
                                   com.example.repository.PublishJobRepository jobRepo) {
         this.pipelineService = pipelineService;
         this.userService = userService;
-        this.approvalService = approvalService;
+        this.scheduleService = scheduleService;
         this.analyticsService = analyticsService;
+        this.trendingService = trendingService;
         this.publishService = publishService;
         this.socialAuthService = socialAuthService;
         this.videoRepo = videoRepo;
@@ -76,7 +80,7 @@ public class VideoContentController {
                     "platform", v.getPlatform(),
                     "caption", v.getCaption(),
                     "hashtags", v.getHashtags(),
-                    "approvalStatus", v.getApprovalStatus().name()
+                    "status", v.getApprovalStatus().name()
                 )).toList()
             ));
         } catch (Exception e) {
@@ -122,58 +126,15 @@ public class VideoContentController {
                 "platform", v.getPlatform(),
                 "caption", v.getCaption(),
                 "hashtags", v.getHashtags(),
-                "approvalStatus", v.getApprovalStatus().name()
+                "status", v.getApprovalStatus().name()
             )).toList()
         ));
     }
 
     /**
-     * [3] Approval workflow: submit for review
-     */
-    @PostMapping("/variants/{id}/submit")
-    public ResponseEntity<?> submitForReview(@AuthenticationPrincipal UserDetails userDetails, @PathVariable Long id) {
-        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        User user = userService.findByEmail(userDetails.getUsername());
-        try {
-            VideoVariant v = approvalService.submitForReview(id, user);
-            return ResponseEntity.ok(Map.of("status", v.getApprovalStatus().name()));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
-     * [3] Approve variant (Manager)
-     */
-    @PostMapping("/variants/{id}/approve")
-    public ResponseEntity<?> approve(@AuthenticationPrincipal UserDetails userDetails, @PathVariable Long id) {
-        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        User user = userService.findByEmail(userDetails.getUsername());
-        try {
-            VideoVariant v = approvalService.approve(id, user);
-            return ResponseEntity.ok(Map.of("status", v.getApprovalStatus().name()));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
-     * [3] Reject variant
-     */
-    @PostMapping("/variants/{id}/reject")
-    public ResponseEntity<?> reject(@AuthenticationPrincipal UserDetails userDetails, @PathVariable Long id) {
-        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        User user = userService.findByEmail(userDetails.getUsername());
-        try {
-            VideoVariant v = approvalService.reject(id, user);
-            return ResponseEntity.ok(Map.of("status", v.getApprovalStatus().name()));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
-        }
-    }
-
-    /**
-     * [4] Schedule publish (Buffer)
+     * Schedule publish: user picks platform + datetime for each variant.
+     * Example: Video A → YouTube tomorrow 4am, Instagram tomorrow 6pm
+     * Body: { "platform": "youtube", "scheduledAt": "2026-03-16T04:00:00" }
      */
     @PostMapping("/variants/{id}/schedule")
     public ResponseEntity<?> schedulePublish(
@@ -187,15 +148,40 @@ public class VideoContentController {
         if (platform == null) return ResponseEntity.badRequest().body(Map.of("error", "platform required"));
         LocalDateTime scheduledAt = scheduledAtStr != null ? LocalDateTime.parse(scheduledAtStr) : LocalDateTime.now();
         try {
-            PublishJob job = approvalService.schedulePublish(id, user.getId(), platform, scheduledAt);
-            return ResponseEntity.ok(Map.of("jobId", job.getId(), "scheduledAt", job.getScheduledAt()));
+            PublishJob job = scheduleService.schedulePublish(id, user.getId(), platform, scheduledAt);
+            return ResponseEntity.ok(Map.of(
+                "jobId", job.getId(),
+                "scheduledAt", job.getScheduledAt(),
+                "platform", platform,
+                "message", "Scheduled! Will publish at " + scheduledAt
+            ));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 
     /**
-     * [5] Publish immediately (uses existing VideoPublishService)
+     * Get user's scheduled jobs
+     */
+    @GetMapping("/schedule")
+    public ResponseEntity<?> getScheduledJobs(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        User user = userService.findByEmail(userDetails.getUsername());
+        var jobs = scheduleService.getScheduledJobsForUser(user.getId());
+        return ResponseEntity.ok(jobs.stream().map(j -> {
+            var v = variantRepo.findById(j.getVariantId()).orElse(null);
+            return Map.of(
+                "jobId", j.getId(),
+                "variantId", j.getVariantId(),
+                "platform", j.getPlatform(),
+                "scheduledAt", j.getScheduledAt().toString(),
+                "videoId", v != null ? v.getVideo().getId() : null
+            );
+        }).toList());
+    }
+
+    /**
+     * Publish immediately
      */
     @PostMapping(value = "/publish/{platform}", consumes = "multipart/form-data")
     public ResponseEntity<?> publishNow(
@@ -216,7 +202,16 @@ public class VideoContentController {
     }
 
     /**
-     * [6] Analytics & AI insights
+     * Viral trends, news, content ideas for users
+     */
+    @GetMapping("/trending")
+    public ResponseEntity<?> getTrending(@AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        return ResponseEntity.ok(trendingService.getTrendingInfo());
+    }
+
+    /**
+     * Analytics & AI insights
      */
     @GetMapping("/analytics")
     public ResponseEntity<?> getAnalytics(@AuthenticationPrincipal UserDetails userDetails) {

@@ -24,7 +24,7 @@ public class S3Config {
 
     @Bean
     public S3Client s3Client() {
-        S3Client.Builder builder = S3Client.builder().region(Region.of(region));
+        var builder = S3Client.builder().region(Region.of(region));
         if (accessKey != null && !accessKey.isBlank() && secretKey != null && !secretKey.isBlank()) {
             builder.credentialsProvider(() -> AwsBasicCredentials.create(accessKey, secretKey));
         } else {
@@ -35,7 +35,7 @@ public class S3Config {
 
     @Bean
     public S3Presigner s3Presigner() {
-        S3Presigner.Builder builder = S3Presigner.builder().region(Region.of(region));
+        var builder = S3Presigner.builder().region(Region.of(region));
         if (accessKey != null && !accessKey.isBlank() && secretKey != null && !secretKey.isBlank()) {
             builder.credentialsProvider(() -> AwsBasicCredentials.create(accessKey, secretKey));
         } else {

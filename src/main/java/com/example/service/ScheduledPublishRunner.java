@@ -31,9 +31,11 @@ public class ScheduledPublishRunner {
     private final SocialAuthService socialAuthService;
     private final S3StorageService s3Storage;
 
+    private final UserRepository userRepo;
+
     public ScheduledPublishRunner(PublishJobRepository jobRepo, VideoVariantRepository variantRepo,
-                                  VideoPublishService publishService, SocialAuthService socialAuthService,
-                                  S3StorageService s3Storage) {
+                                  UserRepository userRepo, VideoPublishService publishService,
+                                  SocialAuthService socialAuthService, S3StorageService s3Storage) {
         this.jobRepo = jobRepo;
         this.variantRepo = variantRepo;
         this.userRepo = userRepo;
