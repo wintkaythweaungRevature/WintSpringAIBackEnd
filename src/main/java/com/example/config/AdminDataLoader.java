@@ -39,5 +39,20 @@ public class AdminDataLoader implements CommandLineRunner {
             sub.setCurrentPeriodEnd(java.time.LocalDateTime.now().plusYears(100));
             subscriptionRepository.save(sub);
         }
+        // Owner account: wint@gmail.com / wintkay — full access to all features
+        if (userRepository.findByEmail("wint@gmail.com").isEmpty()) {
+            User owner = new User("wint@gmail.com", passwordEncoder.encode("wintkay"), "Wint", "Owner");
+            owner.setRole("ROLE_ADMIN");
+            owner.setMembershipType("MEMBER");
+            owner = userRepository.save(owner);
+
+            Subscription sub = new Subscription();
+            sub.setUser(owner);
+            sub.setPlanType(PlanType.MEMBER);
+            sub.setStatus("active");
+            sub.setCurrentPeriodStart(java.time.LocalDateTime.now());
+            sub.setCurrentPeriodEnd(java.time.LocalDateTime.now().plusYears(100));
+            subscriptionRepository.save(sub);
+        }
     }
 }

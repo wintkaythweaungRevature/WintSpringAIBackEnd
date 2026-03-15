@@ -101,11 +101,18 @@ public class UserService {
                 .filter(sub -> sub.getPlanType() == PlanType.MEMBER);
     }
 
+    /** Owner account: full access to all features. */
+    private static final String OWNER_EMAIL = "wint@gmail.com";
+
     /**
      * True only if the user has an active paid (MEMBER) subscription and the current period has not ended.
      * If the period end date has passed, this syncs the user to FREE and returns false so member-only features are blocked.
+     * Owner (wint@gmail.com) always has full access.
      */
     public boolean hasActivePaidAccess(User user) {
+        if (user != null && OWNER_EMAIL.equalsIgnoreCase(user.getEmail())) {
+            return true;
+        }
         // Check subscription record first
         Optional<Subscription> opt = getActiveMemberSubscription(user);
         if (opt.isPresent()) {
