@@ -33,7 +33,7 @@ jobs:
       with:
         context: .
         push: true
-        tags: wintkaythweaugn/spring-ai-backend:latest
+        tags: ${{ secrets.DOCKER_USERNAME }}/spring-ai-backend:latest
         # No build-args for secrets — all secrets are injected at container runtime.
         # Required runtime environment variables for the container:
         #   SPRING_AI_OPENAI_API_KEY  → secrets.OPENAI_API_KEY
