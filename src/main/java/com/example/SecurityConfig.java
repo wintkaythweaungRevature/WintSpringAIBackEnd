@@ -55,6 +55,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/ai/**").authenticated()
                 .requestMatchers("/api/audio/**").authenticated()
+                .requestMatchers("/api/video-content/**").authenticated()
                 .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
