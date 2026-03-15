@@ -3,7 +3,6 @@ package com.example.service;
 import com.example.entity.PublishJob;
 import com.example.entity.VideoVariant;
 import com.example.repository.PublishJobRepository;
-import com.example.repository.UserRepository;
 import com.example.repository.VideoVariantRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,15 +29,14 @@ public class ScheduledPublishRunner {
     private final VideoPublishService publishService;
     private final SocialAuthService socialAuthService;
     private final S3StorageService s3Storage;
-
-    private final UserRepository userRepo;
+    private final UserService userService;
 
     public ScheduledPublishRunner(PublishJobRepository jobRepo, VideoVariantRepository variantRepo,
-                                  UserRepository userRepo, VideoPublishService publishService,
+                                  UserService userService, VideoPublishService publishService,
                                   SocialAuthService socialAuthService, S3StorageService s3Storage) {
         this.jobRepo = jobRepo;
         this.variantRepo = variantRepo;
-        this.userRepo = userRepo;
+        this.userService = userService;
         this.publishService = publishService;
         this.socialAuthService = socialAuthService;
         this.s3Storage = s3Storage;
@@ -56,7 +54,7 @@ public class ScheduledPublishRunner {
 
                 VideoVariant variant = variantRepo.findById(job.getVariantId()).orElseThrow();
                 String platform = mapPlatform(variant.getPlatform());
-                String userEmail = userRepo.findById(job.getUserId()).orElseThrow().getEmail();
+                String userEmail = userService.findById(job.getUserId()).getEmail();
                 String token = socialAuthService.getAccessToken(userEmail, platform);
 
                 byte[] videoBytes = variant.getS3Key() != null
